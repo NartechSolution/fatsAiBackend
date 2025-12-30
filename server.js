@@ -85,7 +85,7 @@ const { scheduleWeeklyBackup } = require('./services/backupService');
 const app = express();
 
 // Set port
-const PORT = process.env.PORT || 2507;
+const PORT = process.env.PORT || 14102;
 
 // Enable gzip compression for all responses
 app.use(compression({
