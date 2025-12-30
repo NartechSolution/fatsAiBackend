@@ -210,6 +210,20 @@ async function startServer() {
     app.use('/api/sliders', sliderRoutes);
     app.use('/api/slider-contents', sliderContentRoutes);
 
+    // Error handling middleware (must be after all routes)
+    app.use((err, req, res, next) => {
+      const status = err.status || 500;
+      const message = err.message || 'Internal server error';
+      
+      console.error('Error:', err);
+      
+      res.status(status).json({
+        success: false,
+        message: message,
+        ...(process.env.NODE_ENV === 'development' && { error: err.stack })
+      });
+    });
+
     // Start the server
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);

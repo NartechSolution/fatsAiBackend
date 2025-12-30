@@ -85,6 +85,27 @@ const createResource = async (req, res, next) => {
       filePath = getDocumentUrl(req.file.filename);
     }
     
+    // Convert boolean strings to booleans
+    const convertToBoolean = (value) => {
+      if (value === undefined || value === null) return undefined;
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'string') {
+        return value.toLowerCase() === 'true' || value === '1';
+      }
+      return Boolean(value);
+    };
+
+    // Validate and parse date
+    let parsedExpiredDate = null;
+    if (expiredDate) {
+      const date = new Date(expiredDate);
+      if (!isNaN(date.getTime())) {
+        parsedExpiredDate = date;
+      } else {
+        return next(createError(400, 'Invalid expiredDate format. Please provide a valid date.'));
+      }
+    }
+
     // Prepare data for database
     const resourceData = {
       title,
@@ -92,10 +113,10 @@ const createResource = async (req, res, next) => {
       file: filePath,
       ResourceCategoryId,
       version,
-      Visibility,
-      expiredDate,
-      feature,
-      status
+      Visibility: convertToBoolean(Visibility),
+      expiredDate: parsedExpiredDate,
+      feature: convertToBoolean(feature),
+      status: convertToBoolean(status)
     };
     
     const newResource = await resourceModel.createResource(resourceData);
@@ -105,7 +126,8 @@ const createResource = async (req, res, next) => {
       data: newResource
     });
   } catch (error) {
-    next(createError(500, 'Error creating resource'));
+    console.error('Error creating resource:', error);
+    next(createError(500, `Error creating resource: ${error.message}`));
   }
 };
 
@@ -149,6 +171,29 @@ const updateResource = async (req, res, next) => {
       filePath = getDocumentUrl(req.file.filename);
     }
     
+    // Convert boolean strings to booleans
+    const convertToBoolean = (value) => {
+      if (value === undefined || value === null) return undefined;
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'string') {
+        return value.toLowerCase() === 'true' || value === '1';
+      }
+      return Boolean(value);
+    };
+
+    // Validate and parse date
+    let parsedExpiredDate = undefined;
+    if (expiredDate !== undefined && expiredDate !== null && expiredDate !== '') {
+      const date = new Date(expiredDate);
+      if (!isNaN(date.getTime())) {
+        parsedExpiredDate = date;
+      } else {
+        return next(createError(400, 'Invalid expiredDate format. Please provide a valid date.'));
+      }
+    } else if (expiredDate === null) {
+      parsedExpiredDate = null;
+    }
+
     // Prepare data for database
     const resourceData = {
       title: title !== undefined ? title : existingResource.title,
@@ -156,10 +201,10 @@ const updateResource = async (req, res, next) => {
       file: filePath,
       ResourceCategoryId,
       version,
-      Visibility,
-      expiredDate,
-      feature,
-      status
+      Visibility: Visibility !== undefined ? convertToBoolean(Visibility) : undefined,
+      expiredDate: parsedExpiredDate,
+      feature: feature !== undefined ? convertToBoolean(feature) : undefined,
+      status: status !== undefined ? convertToBoolean(status) : undefined
     };
     
     const updatedResource = await resourceModel.updateResource(id, resourceData);
@@ -169,7 +214,8 @@ const updateResource = async (req, res, next) => {
       data: updatedResource
     });
   } catch (error) {
-    next(createError(500, 'Error updating resource'));
+    console.error('Error updating resource:', error);
+    next(createError(500, `Error updating resource: ${error.message}`));
   }
 };
 
@@ -192,7 +238,8 @@ const deleteResource = async (req, res, next) => {
       message: 'Resource deleted successfully'
     });
   } catch (error) {
-    next(createError(500, 'Error deleting resource'));
+    console.error('Error deleting resource:', error);
+    next(createError(500, `Error deleting resource: ${error.message}`));
   }
 };
 

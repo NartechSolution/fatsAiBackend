@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../prisma/client');
 
 // Get all Resources
 const getAllResources = async () => {
@@ -50,7 +49,7 @@ const createResource = async (data) => {
       ResourceCategoryId: parseInt(data.ResourceCategoryId),
       version: data.version,
       Visibility: data.Visibility !== undefined ? data.Visibility : true,
-      expiredDate: data.expiredDate ? new Date(data.expiredDate) : null,
+      expiredDate: data.expiredDate || null,
       feature: data.feature !== undefined ? data.feature : false,
       status: data.status !== undefined ? data.status : true,
     },
