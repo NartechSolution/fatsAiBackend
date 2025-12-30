@@ -941,13 +941,28 @@ model ManageLocation {
 }
 
 model Heading {
-  id         Int      @id @default(autoincrement())
-  name       String
-  name_ar    String
-  caption    String?
-  caption_ar String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  name          String
+  name_ar       String
+  caption       String?
+  caption_ar    String?
+  HTMLTag       String?  @db.NVarChar(10) // e.g., "h1", "h2", "h3", "h4", "h5", "h6"
+  Description   String?  @db.NVarChar(Max)
+  fontFamily    String?  @db.NVarChar(100)
+  fontWeight    String?  @db.NVarChar(20) // e.g., "normal", "bold", "400", "700"
+  fontSize      String?  @db.NVarChar(20) // e.g., "16px", "1.5rem"
+  lineHeight    String?  @db.NVarChar(20) // e.g., "1.5", "24px"
+  letterSpacing String?  @db.NVarChar(20) // e.g., "0.5px", "normal"
+  textTransform String?  @db.NVarChar(20) // e.g., "uppercase", "lowercase", "capitalize", "none"
+  textColor     String?  @db.NVarChar(50) // e.g., "#000000", "rgb(0,0,0)"
+  textAlignment String?  @db.NVarChar(20) // e.g., "left", "center", "right", "justify"
+  exampleText   String?  @db.NVarChar(Max)
+  textShadow    String?  @db.NVarChar(100) // e.g., "2px 2px 4px rgba(0,0,0,0.5)"
+  Visibility    Boolean? @default(true)
+  name_filo     String?
+  caption_flo   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 // AssetBrand model

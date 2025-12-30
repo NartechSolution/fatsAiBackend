@@ -37,7 +37,27 @@ const getHeadingById = async (req, res, next) => {
 // Create new Heading
 const createHeading = async (req, res, next) => {
   try {
-    const { name, name_ar, caption, caption_ar } = req.body;
+    const { 
+      name, 
+      name_ar, 
+      caption, 
+      caption_ar,
+      HTMLTag,
+      Description,
+      fontFamily,
+      fontWeight,
+      fontSize,
+      lineHeight,
+      letterSpacing,
+      textTransform,
+      textColor,
+      textAlignment,
+      exampleText,
+      textShadow,
+      Visibility,
+      name_filo,
+      caption_flo
+    } = req.body;
     
     // Validate required fields
     if (!name || !name_ar) {
@@ -49,7 +69,22 @@ const createHeading = async (req, res, next) => {
       name,
       name_ar,
       caption,
-      caption_ar
+      caption_ar,
+      HTMLTag,
+      Description,
+      fontFamily,
+      fontWeight,
+      fontSize,
+      lineHeight,
+      letterSpacing,
+      textTransform,
+      textColor,
+      textAlignment,
+      exampleText,
+      textShadow,
+      Visibility,
+      name_filo,
+      caption_flo
     };
     
     const newHeading = await headingModel.createHeading(headingData);
@@ -67,7 +102,27 @@ const createHeading = async (req, res, next) => {
 const updateHeading = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, name_ar, caption, caption_ar } = req.body;
+    const { 
+      name, 
+      name_ar, 
+      caption, 
+      caption_ar,
+      HTMLTag,
+      Description,
+      fontFamily,
+      fontWeight,
+      fontSize,
+      lineHeight,
+      letterSpacing,
+      textTransform,
+      textColor,
+      textAlignment,
+      exampleText,
+      textShadow,
+      Visibility,
+      name_filo,
+      caption_flo
+    } = req.body;
     
     // Check if Heading exists
     const existingHeading = await headingModel.getHeadingById(id);
@@ -85,7 +140,22 @@ const updateHeading = async (req, res, next) => {
       name,
       name_ar,
       caption,
-      caption_ar
+      caption_ar,
+      HTMLTag,
+      Description,
+      fontFamily,
+      fontWeight,
+      fontSize,
+      lineHeight,
+      letterSpacing,
+      textTransform,
+      textColor,
+      textAlignment,
+      exampleText,
+      textShadow,
+      Visibility,
+      name_filo,
+      caption_flo
     };
     
     const updatedHeading = await headingModel.updateHeading(id, headingData);
