@@ -409,18 +409,20 @@ model MegaMenu {
 
 // SubMegaMenu model
 model SubMegaMenu {
-  id          Int       @id @default(autoincrement())
-  name_en     String
-  name_ar     String
-  image       String?   // Path to the image file
-  caption     String?
-  caption_ar  String?
-  status      Boolean   @default(true)
-  url         String
-  megamenu_id Int       // Foreign key to MegaMenu
-  megaMenu    MegaMenu  @relation(fields: [megamenu_id], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             Int       @id @default(autoincrement())
+  name_en        String
+  name_ar        String
+  image          String?   // Path to the image file
+  caption        String?
+  caption_ar     String?
+  status         Boolean   @default(true)
+  url            String
+  openIs         String?   @db.NVarChar(20) // e.g., "_blank", "_self", "_parent", "_top"
+  roleVisibility String?   @db.NVarChar(Max) // JSON string or comma-separated role IDs
+  megamenu_id    Int       // Foreign key to MegaMenu
+  megaMenu       MegaMenu  @relation(fields: [megamenu_id], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 // Brand model

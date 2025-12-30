@@ -8,7 +8,7 @@ exports.uploadSubMegaMenuImage = upload.single('image');
 // Create a new sub mega menu
 exports.createSubMegaMenu = async (req, res) => {
   try {
-    const { megamenu_id, name_en, name_ar, caption, caption_ar, status, url } = req.body;
+    const { megamenu_id, name_en, name_ar, caption, caption_ar, status, url, openIs, roleVisibility } = req.body;
     
     // Check if the mega menu exists
     const megaMenu = await MegaMenu.getById(megamenu_id);
@@ -33,7 +33,9 @@ exports.createSubMegaMenu = async (req, res) => {
       caption,
       caption_ar,
       status: status !== undefined ? status : true,
-      url
+      url,
+      openIs,
+      roleVisibility
     });
     
     res.status(201).json({
@@ -119,7 +121,7 @@ exports.getSubMegaMenu = async (req, res) => {
 // Update a sub mega menu
 exports.updateSubMegaMenu = async (req, res) => {
   try {
-    const { megamenu_id, name_en, name_ar, caption, caption_ar, status, url } = req.body;
+    const { megamenu_id, name_en, name_ar, caption, caption_ar, status, url, openIs, roleVisibility } = req.body;
     
     // Check if sub mega menu exists
     const existingSubMegaMenu = await SubMegaMenu.getById(req.params.id);
@@ -157,7 +159,9 @@ exports.updateSubMegaMenu = async (req, res) => {
       caption: caption !== undefined ? caption : existingSubMegaMenu.caption,
       caption_ar: caption_ar !== undefined ? caption_ar : existingSubMegaMenu.caption_ar,
       status: status !== undefined ? status : existingSubMegaMenu.status,
-      url: url !== undefined ? url : existingSubMegaMenu.url
+      url: url !== undefined ? url : existingSubMegaMenu.url,
+      openIs: openIs !== undefined ? openIs : existingSubMegaMenu.openIs,
+      roleVisibility: roleVisibility !== undefined ? roleVisibility : existingSubMegaMenu.roleVisibility
     });
     
     res.status(200).json({
