@@ -967,13 +967,31 @@ model Heading {
 
 // ResourceCategory model
 model ResourceCategory {
-  id        Int      @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   name      String
   name_ar   String
   name_filo String?
-  status    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status    Boolean    @default(true)
+  resources Resource[] // One-to-many relationship with Resource
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+// Resource model
+model Resource {
+  id                Int              @id @default(autoincrement())
+  title             String
+  description        String?          @db.NVarChar(Max)
+  file              String?           // Path to the file
+  ResourceCategoryId Int              // Foreign key to ResourceCategory
+  resourceCategory  ResourceCategory @relation(fields: [ResourceCategoryId], references: [id])
+  version           String?
+  Visibility        Boolean?          @default(true)
+  expiredDate       DateTime?
+  feature           Boolean?          @default(false)
+  status            Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 }
 
 // AssetBrand model
