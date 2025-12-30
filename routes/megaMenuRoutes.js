@@ -6,7 +6,7 @@ const { verifyAdminToken } = require('../middleware/auth');
 // @route   POST /api/megamenu
 // @desc    Create a new mega menu
 // @access  Private
-router.post('/', verifyAdminToken, megaMenuController.createMegaMenu);
+router.post('/', verifyAdminToken, megaMenuController.uploadMegaMenuIcon, megaMenuController.createMegaMenu);
 
 // @route   GET /api/megamenu
 // @desc    Get all mega menus
@@ -21,7 +21,7 @@ router.get('/:id', megaMenuController.getMegaMenu);
 // @route   PUT /api/megamenu/:id
 // @desc    Update a mega menu
 // @access  Private
-router.put('/:id', verifyAdminToken, megaMenuController.updateMegaMenu);
+router.put('/:id', verifyAdminToken, megaMenuController.uploadMegaMenuIcon, megaMenuController.updateMegaMenu);
 
 // @route   DELETE /api/megamenu/:id
 // @desc    Delete a mega menu

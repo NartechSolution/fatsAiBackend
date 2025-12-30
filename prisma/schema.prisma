@@ -401,6 +401,7 @@ model MegaMenu {
   id          Int           @id @default(autoincrement())
   name_en     String
   name_ar     String
+  icon        String?       // Path to the icon file
   status      Boolean       @default(true)
   subMenus    SubMegaMenu[] // One-to-many relationship with SubMegaMenu
   createdAt   DateTime      @default(now())

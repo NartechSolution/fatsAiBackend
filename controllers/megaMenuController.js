@@ -1,13 +1,24 @@
 const MegaMenu = require('../models/megaMenu');
+const { upload, getImageUrl } = require('../utils/uploadUtils');
+
+// Middleware for handling file uploads
+exports.uploadMegaMenuIcon = upload.single('icon');
 
 // Create a new mega menu
 exports.createMegaMenu = async (req, res) => {
   try {
     const { name_en, name_ar, status } = req.body;
     
+    // Process icon if uploaded
+    let iconPath = null;
+    if (req.file) {
+      iconPath = getImageUrl(req.file.filename);
+    }
+    
     const megaMenu = await MegaMenu.create({
       name_en,
       name_ar,
+      icon: iconPath,
       status: status !== undefined ? status : true
     });
     
@@ -86,10 +97,17 @@ exports.updateMegaMenu = async (req, res) => {
       });
     }
     
+    // Process icon if uploaded
+    let iconPath = existingMegaMenu.icon;
+    if (req.file) {
+      iconPath = getImageUrl(req.file.filename);
+    }
+    
     // Update mega menu
     const megaMenu = await MegaMenu.update(req.params.id, {
       name_en: name_en !== undefined ? name_en : existingMegaMenu.name_en,
       name_ar: name_ar !== undefined ? name_ar : existingMegaMenu.name_ar,
+      icon: iconPath,
       status: status !== undefined ? status : existingMegaMenu.status
     });
     
