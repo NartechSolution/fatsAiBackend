@@ -57,6 +57,7 @@ const maintenanceRoutes = require('./routes/maintenanceRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const manageLocationRoutes = require('./routes/manageLocationRoutes');
 const headingRoutes = require('./routes/headingRoutes');
+const resourceCategoryRoutes = require('./routes/resourceCategoryRoutes');
 const roleRoutes = require('./routes/roleRoutes');
 const accessLevelRoutes = require('./routes/accessLevelRoutes');
 const permissionRoutes = require('./routes/permissionRoutes');
@@ -185,6 +186,7 @@ async function startServer() {
     app.use('/api/reports', reportRoutes);
     app.use('/api/manage-locations', manageLocationRoutes);
     app.use('/api/headings', headingRoutes);
+    app.use('/api/resource-categories', resourceCategoryRoutes);
     app.use('/api/roles', roleRoutes);
     app.use('/api/access-levels', accessLevelRoutes);
     app.use('/api/permissions', permissionRoutes);

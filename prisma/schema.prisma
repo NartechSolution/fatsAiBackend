@@ -945,7 +945,7 @@ model Heading {
   name          String
   name_ar       String
   caption       String?
-  caption_ar    String?
+  caption_ar     String?
   HTMLTag       String?  @db.NVarChar(10) // e.g., "h1", "h2", "h3", "h4", "h5", "h6"
   Description   String?  @db.NVarChar(Max)
   fontFamily    String?  @db.NVarChar(100)
@@ -963,6 +963,17 @@ model Heading {
   caption_flo   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// ResourceCategory model
+model ResourceCategory {
+  id        Int      @id @default(autoincrement())
+  name      String
+  name_ar   String
+  name_filo String?
+  status    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // AssetBrand model
