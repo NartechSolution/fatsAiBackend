@@ -81,6 +81,7 @@ const sliderRoutes = require('./routes/sliderRoutes');
 const sliderContentRoutes = require('./routes/sliderContentRoutes');
 const generalSettingRoutes = require('./routes/generalSettingRoutes');
 const brandingAppearanceRoutes = require('./routes/brandingAppearanceRoutes');
+const authenticationSecurityRoutes = require('./routes/authenticationSecurityRoutes');
 
 // Import backup service
 const { scheduleWeeklyBackup } = require('./services/backupService');
@@ -213,6 +214,7 @@ async function startServer() {
     app.use('/api/slider-contents', sliderContentRoutes);
     app.use('/api/general-settings', generalSettingRoutes);
     app.use('/api/branding-appearances', brandingAppearanceRoutes);
+    app.use('/api/authentication-securities', authenticationSecurityRoutes);
 
     // Error handling middleware (must be after all routes)
     app.use((err, req, res, next) => {

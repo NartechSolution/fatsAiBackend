@@ -375,7 +375,7 @@ model FooterItem {
   name            String
   url             String?  @db.NVarChar(500)
   openIn          String?  @db.NVarChar(20) // e.g., "_blank", "_self", "_parent", "_top"
-  icon            String?  // Path to the icon file
+  icon            String?  // Path to the icon file  
   textIcon        String?  // Text icon field
   description     String?  @db.NVarChar(Max)
   roleVisibility  String?  @db.NVarChar(Max) // JSON string or comma-separated role IDs
@@ -1197,4 +1197,26 @@ model BrandingAppearance {
   updatedAt     DateTime @updatedAt
 
   @@map("branding_appearances")
+}
+
+// AuthenticationSecurity model
+model AuthenticationSecurity {
+  id                    Int      @id @default(autoincrement())
+  loginMethod           String?  @db.NVarChar(100) // e.g., "email", "username", "both"
+  minPasswordLength     Int?     @default(8)
+  passwordExpiry        Int?     // Days until password expires
+  reqSpecialCharacter   Boolean  @default(false) @map("req_spacial_character")
+  twoFactorAuth         Boolean  @default(false)
+  twoFAMethod           String?  @map("2fa_method") @db.NVarChar(50) // e.g., "email", "sms", "app"
+  sessionTime           Int?     // Session timeout in minutes
+  autoLogout            Boolean  @default(false)
+  loginAttemptLimit     Int?     @default(5) // Maximum login attempts before lockout
+  lockOutDuration       Int?     // Lockout duration in minutes
+  rememberMe            Boolean  @default(false)
+  userRegistration      Boolean  @default(false)
+  emailVerificationReq  Boolean  @default(false) @map("email_varification_req")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("authentication_securities")
 }
