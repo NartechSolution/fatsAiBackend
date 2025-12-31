@@ -328,6 +328,7 @@ model MainCategoryManagement {
   description               String?  @db.NVarChar(Max)
   displayOrder              Int      @default(0)
   icon                      String?  // Path to the icon file
+  textIcon                  String?  // Text icon field
   tagColor                  String?  @db.NVarChar(50)
   roleVisibility            String?  @db.NVarChar(Max) // JSON string or comma-separated role IDs
   linkedPage                String?  @db.NVarChar(255)

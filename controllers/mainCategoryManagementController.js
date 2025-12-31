@@ -19,7 +19,8 @@ exports.createMainCategoryManagement = async (req, res) => {
       linkedPage,
       seoTitle,
       seoDescription,
-      displayLayout
+      displayLayout,
+      textIcon
     } = req.body;
 
     // Validate required fields
@@ -73,6 +74,7 @@ exports.createMainCategoryManagement = async (req, res) => {
         parentCategoryId: parentCategoryId && parentCategoryId !== 'null' && parentCategoryId !== '' ? parseInt(parentCategoryId) : null,
         displayOrder: order,
         icon: iconPath,
+        textIcon: textIcon || null,
         tagColor: tagColor || null,
         roleVisibility: roleVisibility || null,
         linkedPage: linkedPage || null,
@@ -253,7 +255,8 @@ exports.updateMainCategoryManagement = async (req, res) => {
       linkedPage,
       seoTitle,
       seoDescription,
-      displayLayout
+      displayLayout,
+      textIcon
     } = req.body;
 
     // Check if main category management exists
@@ -329,6 +332,7 @@ exports.updateMainCategoryManagement = async (req, res) => {
           ? (displayOrder === null || displayOrder === '' ? existingMainCategoryManagement.displayOrder : (isNaN(parseInt(displayOrder)) ? existingMainCategoryManagement.displayOrder : parseInt(displayOrder)))
           : existingMainCategoryManagement.displayOrder,
         icon: iconPath,
+        textIcon: textIcon !== undefined ? (textIcon || null) : existingMainCategoryManagement.textIcon,
         tagColor: tagColor !== undefined ? (tagColor || null) : existingMainCategoryManagement.tagColor,
         roleVisibility: roleVisibility !== undefined ? (roleVisibility || null) : existingMainCategoryManagement.roleVisibility,
         linkedPage: linkedPage !== undefined ? (linkedPage || null) : existingMainCategoryManagement.linkedPage,
