@@ -355,6 +355,7 @@ model MainFooter {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   status    String   @default("active") @db.NVarChar(20)
+  textIcon  String?  // Text icon field
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -375,6 +376,7 @@ model FooterItem {
   url             String?  @db.NVarChar(500)
   openIn          String?  @db.NVarChar(20) // e.g., "_blank", "_self", "_parent", "_top"
   icon            String?  // Path to the icon file
+  textIcon        String?  // Text icon field
   description     String?  @db.NVarChar(Max)
   roleVisibility  String?  @db.NVarChar(Max) // JSON string or comma-separated role IDs
   createdAt       DateTime @default(now())

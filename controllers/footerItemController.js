@@ -11,7 +11,8 @@ exports.createFooterItem = async (req, res) => {
       url,
       openIn,
       description,
-      roleVisibility
+      roleVisibility,
+      textIcon
     } = req.body;
     
     // Validate required fields
@@ -34,6 +35,7 @@ exports.createFooterItem = async (req, res) => {
         url: url || null,
         openIn: openIn || null,
         icon: iconPath,
+        textIcon: textIcon || null,
         description: description || null,
         roleVisibility: roleVisibility || null
       }
@@ -140,7 +142,8 @@ exports.updateFooterItem = async (req, res) => {
       url,
       openIn,
       description,
-      roleVisibility
+      roleVisibility,
+      textIcon
     } = req.body;
     
     // Check if footer item exists
@@ -175,6 +178,7 @@ exports.updateFooterItem = async (req, res) => {
         url: url !== undefined ? (url || null) : existingFooterItem.url,
         openIn: openIn !== undefined ? (openIn || null) : existingFooterItem.openIn,
         icon: iconPath,
+        textIcon: textIcon !== undefined ? (textIcon || null) : existingFooterItem.textIcon,
         description: description !== undefined ? (description || null) : existingFooterItem.description,
         roleVisibility: roleVisibility !== undefined ? (roleVisibility || null) : existingFooterItem.roleVisibility
       }

@@ -3,7 +3,7 @@ const prisma = require('../prisma/client');
 // Controller methods for MainFooter CRUD operations
 exports.createMainFooter = async (req, res) => {
   try {
-    const { name, status } = req.body;
+    const { name, status, textIcon } = req.body;
     
     // Validate required fields
     if (!name) {
@@ -16,7 +16,8 @@ exports.createMainFooter = async (req, res) => {
     const mainFooter = await prisma.mainFooter.create({
       data: {
         name,
-        status: status || 'active'
+        status: status || 'active',
+        textIcon
       }
     });
     
@@ -97,7 +98,7 @@ exports.getMainFooterById = async (req, res) => {
 exports.updateMainFooter = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, status } = req.body;
+    const { name, status, textIcon } = req.body;
     
     // Check if main footer exists
     const existingMainFooter = await prisma.mainFooter.findUnique({
@@ -113,7 +114,8 @@ exports.updateMainFooter = async (req, res) => {
       where: { id: parseInt(id) },
       data: {
         name: name !== undefined ? name : existingMainFooter.name,
-        status: status !== undefined ? status : existingMainFooter.status
+        status: status !== undefined ? status : existingMainFooter.status,
+        textIcon: textIcon !== undefined ? textIcon : existingMainFooter.textIcon
       }
     });
     
