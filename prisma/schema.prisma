@@ -1177,3 +1177,19 @@ model GeneralSetting {
 
   @@map("general_settings")
 }
+
+// BrandingAppearance model
+model BrandingAppearance {
+  id            Int      @id @default(autoincrement())
+  logo          String?  // Path or URL to the logo file
+  primaryColor  String?  @db.NVarChar(50) // Hex color code
+  secondaryColor String? @db.NVarChar(50) // Hex color code
+  accentColor   String?  @db.NVarChar(50) // Hex color code
+  fontFamily    String?  @db.NVarChar(100)
+  buttonCorner  String?  @db.NVarChar(50) // e.g., "rounded", "square", "pill"
+  darkThemes    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("branding_appearances")
+}
