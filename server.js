@@ -79,6 +79,7 @@ const subFooterRoutes = require('./routes/subFooterRoutes');
 const footerItemRoutes = require('./routes/footerItemRoutes');
 const sliderRoutes = require('./routes/sliderRoutes');
 const sliderContentRoutes = require('./routes/sliderContentRoutes');
+const generalSettingRoutes = require('./routes/generalSettingRoutes');
 
 // Import backup service
 const { scheduleWeeklyBackup } = require('./services/backupService');
@@ -209,6 +210,7 @@ async function startServer() {
     app.use('/api/footer-items', footerItemRoutes);
     app.use('/api/sliders', sliderRoutes);
     app.use('/api/slider-contents', sliderContentRoutes);
+    app.use('/api/general-settings', generalSettingRoutes);
 
     // Error handling middleware (must be after all routes)
     app.use((err, req, res, next) => {

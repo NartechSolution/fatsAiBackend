@@ -1156,3 +1156,24 @@ model SliderContent {
   
   @@index([sliderId])
 }
+
+// GeneralSetting model
+model GeneralSetting {
+  id                Int      @id @default(autoincrement())
+  systemName        String?  @db.NVarChar(255)
+  organizationName  String?  @db.NVarChar(255)
+  contactEmail      String?  @db.NVarChar(255)
+  contactPhone      String?  @db.NVarChar(50)
+  landingPage       String?  @db.NVarChar(500)
+  systemDescription String?  @db.NVarChar(Max)
+  showBrandName     Boolean  @default(true)
+  themes            String?  @db.NVarChar(20) // light, dark, auto
+  timeZone          String?  @db.NVarChar(100)
+  dateFormat        String?  @db.NVarChar(50)
+  currencyFormat    String?  @db.NVarChar(50)
+  status            String   @default("active") @db.NVarChar(20)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("general_settings")
+}
