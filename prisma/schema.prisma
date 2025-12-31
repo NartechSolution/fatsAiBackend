@@ -402,6 +402,7 @@ model MegaMenu {
   name_en     String
   name_ar     String
   icon        String?       // Path to the icon file
+  textIcon    String?       // Text icon field
   status      Boolean       @default(true)
   subMenus    SubMegaMenu[] // One-to-many relationship with SubMegaMenu
   createdAt   DateTime      @default(now())
@@ -416,6 +417,7 @@ model SubMegaMenu {
   image          String?   // Path to the image file
   caption        String?
   caption_ar     String?
+  textIcon       String?    // Text icon field
   status         Boolean   @default(true)
   url            String
   openIs         String?   @db.NVarChar(20) // e.g., "_blank", "_self", "_parent", "_top"

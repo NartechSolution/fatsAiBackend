@@ -7,7 +7,7 @@ exports.uploadMegaMenuIcon = upload.single('icon');
 // Create a new mega menu
 exports.createMegaMenu = async (req, res) => {
   try {
-    const { name_en, name_ar, status } = req.body;
+    const { name_en, name_ar, status, textIcon } = req.body;
     
     // Process icon if uploaded
     let iconPath = null;
@@ -19,6 +19,7 @@ exports.createMegaMenu = async (req, res) => {
       name_en,
       name_ar,
       icon: iconPath,
+      textIcon,
       status: status !== undefined ? status : true
     });
     
@@ -85,7 +86,7 @@ exports.getMegaMenu = async (req, res) => {
 // Update a mega menu
 exports.updateMegaMenu = async (req, res) => {
   try {
-    const { name_en, name_ar, status } = req.body;
+    const { name_en, name_ar, status, textIcon } = req.body;
     
     // Check if mega menu exists
     const existingMegaMenu = await MegaMenu.getById(req.params.id);
@@ -108,6 +109,7 @@ exports.updateMegaMenu = async (req, res) => {
       name_en: name_en !== undefined ? name_en : existingMegaMenu.name_en,
       name_ar: name_ar !== undefined ? name_ar : existingMegaMenu.name_ar,
       icon: iconPath,
+      textIcon: textIcon !== undefined ? textIcon : existingMegaMenu.textIcon,
       status: status !== undefined ? status : existingMegaMenu.status
     });
     
