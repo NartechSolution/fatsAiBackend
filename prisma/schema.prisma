@@ -1220,3 +1220,28 @@ model AuthenticationSecurity {
 
   @@map("authentication_securities")
 }
+
+// SettingRolePermission model
+model SettingRolePermission {
+  id                    Int      @id @default(autoincrement())
+  roleForNewUsers       String?  @db.NVarChar(255) // Role name or role ID for new users
+  allowRoleEditor       Boolean  @default(false)
+  allowDeparmentCreation Boolean @default(false) @map("allow_deparment_creation")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("setting_role_permissions")
+}
+
+// NotificationAlert model
+model NotificationAlert {
+  id                Int      @id @default(autoincrement())
+  emailNotification Boolean  @default(false)
+  pushNotification  Boolean  @default(false)
+  dailySummaryEmail Boolean  @default(false)
+  notificationSound Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("notification_alerts")
+}
