@@ -1245,3 +1245,16 @@ model NotificationAlert {
 
   @@map("notification_alerts")
 }
+
+// ApiIntegration model
+model ApiIntegration {
+  id                  Int      @id @default(autoincrement())
+  apiKey              String   @db.NVarChar(Max)
+  googleMapIntegration Boolean @default(false)
+  cloudStorage        Boolean  @default(false)
+  emailService        Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("api_integrations")
+}

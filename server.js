@@ -84,6 +84,7 @@ const brandingAppearanceRoutes = require('./routes/brandingAppearanceRoutes');
 const authenticationSecurityRoutes = require('./routes/authenticationSecurityRoutes');
 const settingRolePermissionRoutes = require('./routes/settingRolePermissionRoutes');
 const notificationAlertRoutes = require('./routes/notificationAlertRoutes');
+const apiIntegrationRoutes = require('./routes/apiIntegrationRoutes');
 
 // Import backup service
 const { scheduleWeeklyBackup } = require('./services/backupService');
@@ -219,6 +220,7 @@ async function startServer() {
     app.use('/api/authentication-securities', authenticationSecurityRoutes);
     app.use('/api/setting-role-permissions', settingRolePermissionRoutes);
     app.use('/api/notification-alerts', notificationAlertRoutes);
+    app.use('/api/api-integrations', apiIntegrationRoutes);
 
     // Error handling middleware (must be after all routes)
     app.use((err, req, res, next) => {
