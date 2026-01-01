@@ -1258,3 +1258,15 @@ model ApiIntegration {
 
   @@map("api_integrations")
 }
+// DataManagement model
+model DataManagement {
+  id                  Int       @id @default(autoincrement())
+  file                String?   // Path to the file
+  exportData          String?   // Could be JSON string or description
+  autoBackUpDate      DateTime?
+  dataRetentionPolicy String?   // Policy name or description
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@map("data_managements")
+}

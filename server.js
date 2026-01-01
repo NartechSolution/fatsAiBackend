@@ -85,6 +85,8 @@ const authenticationSecurityRoutes = require('./routes/authenticationSecurityRou
 const settingRolePermissionRoutes = require('./routes/settingRolePermissionRoutes');
 const notificationAlertRoutes = require('./routes/notificationAlertRoutes');
 const apiIntegrationRoutes = require('./routes/apiIntegrationRoutes');
+const dataManagementRoutes = require('./routes/dataManagementRoutes');
+
 
 // Import backup service
 const { scheduleWeeklyBackup } = require('./services/backupService');
@@ -124,7 +126,7 @@ app.use(cors({
 // Add a simple request logger middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  
+
   next();
 });
 
@@ -141,10 +143,10 @@ async function startServer() {
     // Connect to the database
     await prisma.$connect();
     console.log('Connected to SQL Server database');
-    
+
     // Initialize scheduled weekly backup (cron job)
     scheduleWeeklyBackup();
-    
+
     // API Routes
     app.use('/api/temperature', temperatureRoutes);
     app.use('/api/soil-moisture', soilMoistureRoutes);
@@ -221,14 +223,14 @@ async function startServer() {
     app.use('/api/setting-role-permissions', settingRolePermissionRoutes);
     app.use('/api/notification-alerts', notificationAlertRoutes);
     app.use('/api/api-integrations', apiIntegrationRoutes);
-
+    app.use('/api/data-management', dataManagementRoutes);
     // Error handling middleware (must be after all routes)
     app.use((err, req, res, next) => {
       const status = err.status || 500;
       const message = err.message || 'Internal server error';
-      
+
       console.error('Error:', err);
-      
+
       res.status(status).json({
         success: false,
         message: message,
