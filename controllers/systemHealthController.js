@@ -1,6 +1,7 @@
 const os = require('os');
 const prisma = require('../prisma/client');
 const fs = require('fs');
+const cache = require('../utils/cache');
 
 exports.getSystemHealth = async (req, res) => {
     try {
@@ -87,9 +88,11 @@ exports.getSystemHealth = async (req, res) => {
         }
 
         // 6. Redis/Cache Status
-        // Since we know Redis is not installed/configured in package.json
-        const cacheStatus = 'Inactive';
-        const redisStatus = 'Not Installed';
+        // We are using node-cache (in-memory)
+        const cacheStats = cache.getStats();
+        const cacheKeys = cache.keys().length;
+        const cacheStatus = 'Active';
+        const cacheDetails = `NodeCache: Running | Items: ${cacheKeys} | Hits: ${cacheStats.hits} | Misses: ${cacheStats.misses}`;
 
         res.status(200).json({
             success: true,
@@ -112,7 +115,7 @@ exports.getSystemHealth = async (req, res) => {
                 },
                 cache: {
                     status: cacheStatus,
-                    details: redisStatus
+                    details: cacheDetails
                 },
                 diagnostics: {
                     lastRun: new Date(),
