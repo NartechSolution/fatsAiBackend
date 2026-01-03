@@ -86,6 +86,7 @@ const settingRolePermissionRoutes = require('./routes/settingRolePermissionRoute
 const notificationAlertRoutes = require('./routes/notificationAlertRoutes');
 const apiIntegrationRoutes = require('./routes/apiIntegrationRoutes');
 const dataManagementRoutes = require('./routes/dataManagementRoutes');
+const languageLocalizationRoutes = require('./routes/languageLocalizationRoutes');
 
 
 // Import backup service
@@ -224,6 +225,7 @@ async function startServer() {
     app.use('/api/notification-alerts', notificationAlertRoutes);
     app.use('/api/api-integrations', apiIntegrationRoutes);
     app.use('/api/data-management', dataManagementRoutes);
+    app.use('/api/language-localization', languageLocalizationRoutes);
     // Error handling middleware (must be after all routes)
     app.use((err, req, res, next) => {
       const status = err.status || 500;

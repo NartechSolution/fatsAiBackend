@@ -1270,3 +1270,16 @@ model DataManagement {
 
   @@map("data_managements")
 }
+
+// LanguageLocalization model
+model LanguageLocalization {
+  id              Int      @id @default(autoincrement())
+  defaultLanguage String   @db.NVarChar(50)
+  RTLSupport      Boolean  @default(false)
+  currencySymbol  String   @default("left") @db.NVarChar(20) // left, right
+  unitSystem      String   @default("metric") @db.NVarChar(20) // metric, imperial
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("language_localizations")
+}
