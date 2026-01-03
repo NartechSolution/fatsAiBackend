@@ -12,7 +12,7 @@ const auditLogMiddleware = (req, res, next) => {
             }
 
             const userId = req.user ? req.user.userId : null;
-            const userName = req.user ? req.user.username : (req.body.email || 'Guest');
+            const userName = req.user ? req.user.username : ((req.body && req.body.email) || 'Guest');
             const activity = `${req.method} ${req.originalUrl}`;
             const status = res.statusCode >= 400 ? 'Failed' : 'Success';
             const details = `Status Code: ${res.statusCode} - IP: ${req.ip}`;
