@@ -9,8 +9,8 @@ const Joi = require('joi');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs').promises;
-const fsSync = require('fs');
 const ejs = require('ejs');
+const { logActivity } = require('../utils/auditLogger');
 
 // JWT secret key - should be in environment variables in production
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -117,41 +117,41 @@ const COMPANY_DETAILS = {
 exports.signup = async (req, res) => {
   try {
     const { email, username, password, isNfcEnable, nfcNumber } = req.body;
-    
+
     // Validate input
     if (!email || !username || !password) {
-      return res.status(400).json({ 
-        error: 'Email, username, and password are required' 
+      return res.status(400).json({
+        error: 'Email, username, and password are required'
       });
     }
-    
+
     // Check if email already exists
     const existingEmail = await User.findByEmail(email);
     if (existingEmail) {
-      return res.status(400).json({ 
-        error: 'Email already in use' 
+      return res.status(400).json({
+        error: 'Email already in use'
       });
     }
-    
+
     // Check if username already exists
     const existingUsername = await User.findByUsername(username);
     if (existingUsername) {
-      return res.status(400).json({ 
-        error: 'Username already taken' 
+      return res.status(400).json({
+        error: 'Username already taken'
       });
     }
-    
+
     // Check if NFC number is already in use (if provided and NFC is enabled)
     // If isNfcEnable is false, we won't check for NFC number uniqueness
     if (nfcNumber && (isNfcEnable === true || isNfcEnable === undefined)) {
       const existingNfc = await User.findByNfcNumber(nfcNumber);
       if (existingNfc) {
-        return res.status(400).json({ 
-          error: 'NFC number already in use' 
+        return res.status(400).json({
+          error: 'NFC number already in use'
         });
       }
     }
-    
+
     // Create new user - if isNfcEnable is false, set nfcNumber to null regardless of input
     const user = await User.create({
       email,
@@ -160,14 +160,14 @@ exports.signup = async (req, res) => {
       isNfcEnable: isNfcEnable || false,
       nfcNumber: isNfcEnable === false ? null : (nfcNumber || null)
     });
-    
+
     // Create JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
-    
+
     // Return user info (excluding password) and token
     res.status(201).json({
       message: 'User created successfully',
@@ -235,7 +235,7 @@ exports.createUser = async (req, res, next) => {
     // Check if NFC number is already in use (if provided and NFC is enabled)
     if (userData.nfcNumber && userData.isNfcEnable) {
       const existingNfc = await prisma.user.findFirst({
-        where: { 
+        where: {
           nfcNumber: userData.nfcNumber,
           isNfcEnable: true
         }
@@ -368,7 +368,7 @@ exports.createUser = async (req, res, next) => {
       pdfGenerationResult = { success: false, error: null };
       try {
         await convertEjsToPdf(pdfDirectory, invoiceData, pdfFilePath);
-        
+
         // Verify PDF was created successfully
         if (!fsSync.existsSync(pdfFilePath)) {
           throw new Error(`PDF generation failed - file not created at ${pdfFilePath}`);
@@ -384,7 +384,7 @@ exports.createUser = async (req, res, next) => {
             status: 'inactive',
           },
         });
-        
+
         pdfGenerationResult = { success: true, error: null };
       } catch (pdfError) {
         pdfGenerationResult = {
@@ -457,7 +457,7 @@ exports.createUser = async (req, res, next) => {
           },
         ],
       });
-      
+
       if (emailResponse && !emailResponse.emailSkipped) {
         emailResult = { success: true, error: null };
       } else {
@@ -515,7 +515,7 @@ exports.createUser = async (req, res, next) => {
     });
   } catch (error) {
     console.error('Create User Error:', error);
-    
+
     // Return structured JSON error response
     return res.status(error.statusCode || 500).json({
       success: false,
@@ -534,30 +534,30 @@ exports.createUser = async (req, res, next) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     // Validate input
     if (!email || !password) {
-      return res.status(400).json({ 
-        error: 'Email and password are required' 
+      return res.status(400).json({
+        error: 'Email and password are required'
       });
     }
-    
+
     // Find user by email
     const user = await User.findByEmail(email);
     if (!user) {
-      return res.status(401).json({ 
-        error: 'Invalid credentials' 
+      return res.status(401).json({
+        error: 'Invalid credentials'
       });
     }
-    
+
     // Verify password
     const isPasswordValid = await User.verifyPassword(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ 
-        error: 'Invalid credentials' 
+      return res.status(401).json({
+        error: 'Invalid credentials'
       });
     }
-    
+
     // Generate token and send response
     generateTokenAndResponse(user, res);
   } catch (error) {
@@ -570,29 +570,29 @@ exports.login = async (req, res) => {
 exports.loginWithNfc = async (req, res) => {
   try {
     const { nfcNumber } = req.body;
-    
+
     // Validate input
     if (!nfcNumber) {
-      return res.status(400).json({ 
-        error: 'NFC number is required' 
+      return res.status(400).json({
+        error: 'NFC number is required'
       });
     }
-    
+
     // Find user by NFC number
     const user = await User.findByNfcNumber(nfcNumber);
     if (!user) {
-      return res.status(401).json({ 
-        error: 'Invalid NFC card' 
+      return res.status(401).json({
+        error: 'Invalid NFC card'
       });
     }
-    
+
     // Check if NFC login is enabled for this user
     if (!user.isNfcEnable) {
-      return res.status(401).json({ 
-        error: 'NFC login is not enabled for this user' 
+      return res.status(401).json({
+        error: 'NFC login is not enabled for this user'
       });
     }
-    
+
     // Generate token and send response
     generateTokenAndResponse(user, res);
   } catch (error) {
@@ -609,7 +609,7 @@ function generateTokenAndResponse(user, res) {
     JWT_SECRET,
     { expiresIn: '24h' }
   );
-  
+
   // Return user info and token
   return res.status(200).json({
     message: 'Login successful',
@@ -622,6 +622,11 @@ function generateTokenAndResponse(user, res) {
     },
     token
   });
+
+  // Log the successful login (fire and forget)
+  logActivity('User Login', user.id, user.username, 'Success', 'User logged in successfully');
+
+  return response;
 }
 
 // Get current user info
@@ -629,7 +634,7 @@ exports.getMe = async (req, res) => {
   try {
     // The user ID comes from the authenticated request
     const userId = req.user.userId;
-    
+
     // Find user by ID with subscription information
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -653,14 +658,14 @@ exports.getMe = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ 
-        error: 'User not found' 
+      return res.status(404).json({
+        error: 'User not found'
       });
     }
 
     // Process subscription and documents data to make it more readable
     const userResponse = { ...user };
-    
+
     // Format subscription data if available
     if (user.user_subscriptions && user.user_subscriptions.length > 0) {
       const subscription = user.user_subscriptions[0];
@@ -690,13 +695,13 @@ exports.getMe = async (req, res) => {
         expiresAt: subscription.expiresAt,
         paymentStatus: subscription.paymentStatus
       };
-      
+
       // Remove the nested structure to clean up response
       delete userResponse.user_subscriptions;
     } else {
       userResponse.subscription = null;
     }
-    
+
     // Get documents directly using the user_id field
     const documents = await prisma.memberDocument.findMany({
       where: {
@@ -705,7 +710,7 @@ exports.getMe = async (req, res) => {
         deletedAt: null
       }
     });
-    
+
     // Format documents data
     if (documents && documents.length > 0) {
       userResponse.documents = documents.map(doc => ({
@@ -720,7 +725,7 @@ exports.getMe = async (req, res) => {
     } else {
       userResponse.documents = [];
     }
-    
+
     // Return user info with subscription and documents data
     res.status(200).json({
       user: userResponse
@@ -736,15 +741,15 @@ exports.updateNfcSettings = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { isNfcEnable, nfcNumber } = req.body;
-    
+
     // Find user by ID
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ 
-        error: 'User not found' 
+      return res.status(404).json({
+        error: 'User not found'
       });
     }
-    
+
     // If NFC is being disabled, automatically set nfcNumber to null
     let updatedNfcNumber = nfcNumber;
     if (isNfcEnable === false) {
@@ -753,18 +758,18 @@ exports.updateNfcSettings = async (req, res) => {
       // Only check for existing NFC if NFC is enabled and number is changing
       const existingNfc = await User.findByNfcNumber(nfcNumber);
       if (existingNfc) {
-        return res.status(400).json({ 
-          error: 'NFC number already in use' 
+        return res.status(400).json({
+          error: 'NFC number already in use'
         });
       }
     }
-    
+
     // Update user NFC settings
     const updatedUser = await User.updateById(userId, {
       isNfcEnable: isNfcEnable !== undefined ? isNfcEnable : user.isNfcEnable,
       nfcNumber: isNfcEnable === false ? null : (updatedNfcNumber !== undefined ? updatedNfcNumber : user.nfcNumber)
     });
-    
+
     res.status(200).json({
       message: 'NFC settings updated successfully',
       user: {
@@ -830,18 +835,18 @@ exports.updateProfile = async (req, res) => {
       expireDate,
       paymentType
     } = req.body;
-    
+
     // Handle uploaded image file - store full path
     const image = req.file ? getImageUrl(req.file.filename) : undefined;
-    
+
     // Find user by ID
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ 
-        error: 'User not found' 
+      return res.status(404).json({
+        error: 'User not found'
       });
     }
-    
+
     // Helper function to convert string booleans to actual booleans
     const convertToBoolean = (value) => {
       if (typeof value === 'boolean') return value;
@@ -854,7 +859,7 @@ exports.updateProfile = async (req, res) => {
 
     // Validate and convert boolean notification fields
     let convertedEmailNotification, convertedSmsAlert, convertedPushNotification;
-    
+
     if (emailNotification !== undefined) {
       convertedEmailNotification = convertToBoolean(emailNotification);
       if (convertedEmailNotification === null) {
@@ -863,7 +868,7 @@ exports.updateProfile = async (req, res) => {
         });
       }
     }
-    
+
     if (smsAlert !== undefined) {
       convertedSmsAlert = convertToBoolean(smsAlert);
       if (convertedSmsAlert === null) {
@@ -872,7 +877,7 @@ exports.updateProfile = async (req, res) => {
         });
       }
     }
-    
+
     if (pushNotification !== undefined) {
       convertedPushNotification = convertToBoolean(pushNotification);
       if (convertedPushNotification === null) {
@@ -884,7 +889,7 @@ exports.updateProfile = async (req, res) => {
 
     // Prepare update data - only include fields that are provided
     const updateData = {};
-    
+
     // Add fields to update data only if they are provided in the request
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
@@ -906,7 +911,7 @@ exports.updateProfile = async (req, res) => {
     if (gps_location !== undefined) updateData.gps_location = gps_location;
     if (latitude !== undefined) updateData.latitude = latitude;
     if (longitude !== undefined) updateData.longitude = longitude;
-    
+
     // Additional profile fields
     if (phoneNo !== undefined) updateData.phoneNo = phoneNo;
     if (dateOfBirth !== undefined) updateData.dateOfBirth = dateOfBirth;
@@ -932,35 +937,35 @@ exports.updateProfile = async (req, res) => {
     if (cvc !== undefined) updateData.cvc = cvc;
     if (expireDate !== undefined) updateData.expireDate = expireDate;
     if (paymentType !== undefined) updateData.paymentType = paymentType;
-    
+
     // Validate business_type if provided
     if (business_type && !['organization', 'individual', 'family business'].includes(business_type)) {
       return res.status(400).json({
         error: 'Invalid business_type. Must be one of: organization, individual, family business'
       });
     }
-    
+
     // Validate gender if provided
     if (gender && !['male', 'female', 'other'].includes(gender.toLowerCase())) {
       return res.status(400).json({
         error: 'Invalid gender. Must be one of: male, female, other'
       });
     }
-    
+
     // Validate paymentType if provided
     if (paymentType && !['bankTransfer', 'creditCard', 'debitCard', 'paypal'].includes(paymentType)) {
       return res.status(400).json({
         error: 'Invalid paymentType. Must be one of: bankTransfer, creditCard, debitCard, paypal'
       });
     }
-    
+
     // Validate dateOfBirth format if provided
     if (dateOfBirth && isNaN(Date.parse(dateOfBirth))) {
       return res.status(400).json({
         error: 'Invalid dateOfBirth format. Please provide a valid date'
       });
     }
-    
+
     // Validate industry_types if provided (should be valid JSON string)
     if (industry_types) {
       try {
@@ -971,17 +976,17 @@ exports.updateProfile = async (req, res) => {
         });
       }
     }
-    
+
     // If no fields to update, return error
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
         error: 'No fields provided for update'
       });
     }
-    
+
     // Update user profile
     const updatedUser = await User.updateById(userId, updateData);
-    
+
     res.status(200).json({
       message: 'Profile updated successfully',
       user: {

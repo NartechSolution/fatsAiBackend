@@ -1283,3 +1283,27 @@ model LanguageLocalization {
 
   @@map("language_localizations")
 }
+
+// AuditLogSetting model
+model AuditLogSetting {
+  id                 Int      @id @default(autoincrement())
+  enableAuditLogging Boolean  @default(true)
+  logLevel           String   @default("All Activities") @db.NVarChar(50)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("audit_log_settings")
+}
+
+// AuditLog model
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  activity  String   @db.NVarChar(255)
+  userId    String?  @db.NVarChar(100)
+  userName  String?  @db.NVarChar(100)
+  timestamp DateTime @default(now())
+  status    String   @db.NVarChar(50)
+  details   String?  @db.NVarChar(Max)
+
+  @@map("audit_logs")
+}

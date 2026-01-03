@@ -1,11 +1,12 @@
 const generalSettingModel = require('../models/generalSetting');
 const { createError } = require('../utils/createError');
+const { logActivity } = require('../utils/auditLogger');
 
 // Get all GeneralSettings
 const getAllGeneralSettings = async (req, res, next) => {
   try {
     const generalSettings = await generalSettingModel.getAllGeneralSettings();
-    
+
     res.status(200).json({
       success: true,
       data: generalSettings
@@ -20,11 +21,11 @@ const getGeneralSettingById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const generalSetting = await generalSettingModel.getGeneralSettingById(id);
-    
+
     if (!generalSetting) {
       return next(createError(404, 'General setting not found'));
     }
-    
+
     res.status(200).json({
       success: true,
       data: generalSetting
@@ -37,7 +38,7 @@ const getGeneralSettingById = async (req, res, next) => {
 // Create new GeneralSetting
 const createGeneralSetting = async (req, res, next) => {
   try {
-    const { 
+    const {
       systemName,
       organizationName,
       contactEmail,
@@ -51,12 +52,12 @@ const createGeneralSetting = async (req, res, next) => {
       currencyFormat,
       status
     } = req.body;
-    
+
     // Validate themes enum if provided
     if (themes && !['light', 'dark', 'auto'].includes(themes)) {
       return next(createError(400, 'Themes must be one of: light, dark, auto'));
     }
-    
+
     // Convert boolean strings to booleans
     const convertToBoolean = (value) => {
       if (value === undefined || value === null) return undefined;
@@ -82,9 +83,9 @@ const createGeneralSetting = async (req, res, next) => {
       currencyFormat,
       status
     };
-    
+
     const newGeneralSetting = await generalSettingModel.createGeneralSetting(generalSettingData);
-    
+
     res.status(201).json({
       success: true,
       data: newGeneralSetting
@@ -99,7 +100,7 @@ const createGeneralSetting = async (req, res, next) => {
 const updateGeneralSetting = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { 
+    const {
       systemName,
       organizationName,
       contactEmail,
@@ -113,18 +114,18 @@ const updateGeneralSetting = async (req, res, next) => {
       currencyFormat,
       status
     } = req.body;
-    
+
     // Check if GeneralSetting exists
     const existingGeneralSetting = await generalSettingModel.getGeneralSettingById(id);
     if (!existingGeneralSetting) {
       return next(createError(404, 'General setting not found'));
     }
-    
+
     // Validate themes enum if provided
     if (themes && !['light', 'dark', 'auto'].includes(themes)) {
       return next(createError(400, 'Themes must be one of: light, dark, auto'));
     }
-    
+
     // Convert boolean strings to booleans
     const convertToBoolean = (value) => {
       if (value === undefined || value === null) return undefined;
@@ -150,9 +151,17 @@ const updateGeneralSetting = async (req, res, next) => {
       currencyFormat,
       status
     };
-    
+
     const updatedGeneralSetting = await generalSettingModel.updateGeneralSetting(id, generalSettingData);
-    
+
+    // Log the setting update
+    // Note: In a real app we might get the user ID from req.user if authenticated
+    // For now we'll put "Admin" or similar if we don't have req.user, or check if it's available.
+    const userId = req.user ? req.user.userId : 'System';
+    const userName = req.user ? req.user.username : 'Admin';
+
+    logActivity('Settings Updated', userId, userName, 'Success', `General settings updated for system: ${systemName || 'Unknown'}`);
+
     res.status(200).json({
       success: true,
       data: updatedGeneralSetting
@@ -167,16 +176,16 @@ const updateGeneralSetting = async (req, res, next) => {
 const deleteGeneralSetting = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     // Check if GeneralSetting exists
     const existingGeneralSetting = await generalSettingModel.getGeneralSettingById(id);
     if (!existingGeneralSetting) {
       return next(createError(404, 'General setting not found'));
     }
-    
+
     // Delete the GeneralSetting
     await generalSettingModel.deleteGeneralSetting(id);
-    
+
     res.status(200).json({
       success: true,
       message: 'General setting deleted successfully'
