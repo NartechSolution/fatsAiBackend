@@ -132,6 +132,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Global Audit Log Middleware
+const auditLogMiddleware = require('./middleware/auditLogMiddleware');
+app.use(auditLogMiddleware);
+
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Serve documents from uploads/documents directory
