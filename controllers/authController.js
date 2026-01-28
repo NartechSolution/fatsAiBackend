@@ -23,7 +23,7 @@ const signupSchema = Joi.object({
   username: Joi.string().min(3).max(50).required(),
   password: Joi.string().min(6).optional(), // Made optional - will auto-generate if not provided
   firstName: Joi.string().max(100).optional(),
-  lastName: Joi.string().max(100).optional(),
+  lastName: Joi.string().max(100).optional().allow('', null),
   phoneNo: Joi.string().max(20).optional(),
   cr_number: Joi.string().max(100).optional(),
   tin_number: Joi.string().max(100).optional(),
