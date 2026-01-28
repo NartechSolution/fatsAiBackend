@@ -9,6 +9,7 @@ const Joi = require('joi');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const ejs = require('ejs');
 const { logActivity } = require('../utils/auditLogger');
 
