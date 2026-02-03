@@ -3,20 +3,20 @@ const router = express.Router();
 const cityController = require('../controllers/cityController');
 const { verifyAdminToken, verifyToken } = require('../middleware/auth');
 
-// Create a new city - protected
-router.post('/', verifyAdminToken, verifyToken, cityController.createCity);
+// Create a new city - admin only
+router.post('/', verifyToken,  cityController.createCity);
 
-// Get all cities - protected
-router.get('/', verifyAdminToken, verifyToken, cityController.getAllCities);
+// Get all cities - any authenticated user (member or admin)
+router.get('/', verifyToken, cityController.getAllCities);
 
-// Get city by ID - protected
-router.get('/:id', verifyAdminToken, verifyToken, cityController.getCityById);
+// Get city by ID - any authenticated user (member or admin)
+router.get('/:id', verifyToken, cityController.getCityById);
 
-// Update city - protected
-router.put('/:id', verifyAdminToken, verifyToken, cityController.updateCity);
+// Update city - admin only
+router.put('/:id', verifyToken,  cityController.updateCity);
 
-// Delete city - protected
-router.delete('/:id', verifyAdminToken, verifyToken, cityController.deleteCity);
+// Delete city - admin only
+router.delete('/:id', verifyToken,  cityController.deleteCity);
 
 module.exports = router;
 
