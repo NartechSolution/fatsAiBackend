@@ -40,6 +40,7 @@ exports.getAllSubFooters = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10; // Default to 10 records per page
     const skip = (page - 1) * limit;
     const status = req.query.status;
+    const includeFooterItems = req.query.includeFooterItems !== 'false'; // Include children (default true)
     
     // Build filter object
     const where = {};
@@ -50,7 +51,8 @@ exports.getAllSubFooters = async (req, res) => {
       where,
       skip: skip,
       take: limit,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: includeFooterItems ? { footerItems: true } : undefined
     });
     
     // Get total count
@@ -78,9 +80,10 @@ exports.getSubFooterById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Find sub footer by ID
+    // Find sub footer by ID with child footerItems included
     const subFooter = await prisma.subFooter.findUnique({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
+      include: { footerItems: true }
     });
     
     if (!subFooter) {

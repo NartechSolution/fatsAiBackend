@@ -12,7 +12,8 @@ exports.createFooterItem = async (req, res) => {
       openIn,
       description,
       roleVisibility,
-      textIcon
+      textIcon,
+      subFooterId
     } = req.body;
     
     // Validate required fields
@@ -20,6 +21,16 @@ exports.createFooterItem = async (req, res) => {
       return res.status(400).json({
         error: 'Required field missing: name is required'
       });
+    }
+    
+    // Optionally validate parent exists if subFooterId provided
+    if (subFooterId != null) {
+      const subFooter = await prisma.subFooter.findUnique({
+        where: { id: parseInt(subFooterId) }
+      });
+      if (!subFooter) {
+        return res.status(400).json({ error: 'Sub footer not found for given subFooterId' });
+      }
     }
     
     // Handle icon file upload
@@ -37,8 +48,10 @@ exports.createFooterItem = async (req, res) => {
         icon: iconPath,
         textIcon: textIcon || null,
         description: description || null,
-        roleVisibility: roleVisibility || null
-      }
+        roleVisibility: roleVisibility || null,
+        subFooterId: subFooterId != null ? parseInt(subFooterId) : null
+      },
+      include: { subFooter: true }
     });
     
     res.status(201).json({
@@ -69,6 +82,8 @@ exports.getAllFooterItems = async (req, res) => {
     const skip = (page - 1) * limit;
     const roleVisibility = req.query.roleVisibility;
     const search = req.query.search;
+    const subFooterId = req.query.subFooterId; // Filter by parent
+    const includeSubFooter = req.query.includeSubFooter !== 'false'; // Include parent in response (default true)
     
     // Build filter object
     const where = {};
@@ -76,6 +91,9 @@ exports.getAllFooterItems = async (req, res) => {
       where.roleVisibility = {
         contains: roleVisibility
       };
+    }
+    if (subFooterId != null && subFooterId !== '') {
+      where.subFooterId = parseInt(subFooterId);
     }
     if (search) {
       where.OR = [
@@ -90,7 +108,8 @@ exports.getAllFooterItems = async (req, res) => {
       where,
       skip: skip,
       take: limit,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      include: includeSubFooter ? { subFooter: true } : undefined
     });
     
     // Get total count
@@ -118,9 +137,10 @@ exports.getFooterItemById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Find footer item by ID
+    // Find footer item by ID with parent subFooter included
     const footerItem = await prisma.footerItem.findUnique({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
+      include: { subFooter: true }
     });
     
     if (!footerItem) {
@@ -143,7 +163,8 @@ exports.updateFooterItem = async (req, res) => {
       openIn,
       description,
       roleVisibility,
-      textIcon
+      textIcon,
+      subFooterId
     } = req.body;
     
     // Check if footer item exists
@@ -153,6 +174,16 @@ exports.updateFooterItem = async (req, res) => {
     
     if (!existingFooterItem) {
       return res.status(404).json({ message: 'Footer item not found' });
+    }
+    
+    // Optionally validate parent exists if subFooterId provided
+    if (subFooterId != null && subFooterId !== '') {
+      const subFooter = await prisma.subFooter.findUnique({
+        where: { id: parseInt(subFooterId) }
+      });
+      if (!subFooter) {
+        return res.status(400).json({ error: 'Sub footer not found for given subFooterId' });
+      }
     }
     
     // Handle icon file upload
@@ -180,8 +211,10 @@ exports.updateFooterItem = async (req, res) => {
         icon: iconPath,
         textIcon: textIcon !== undefined ? (textIcon || null) : existingFooterItem.textIcon,
         description: description !== undefined ? (description || null) : existingFooterItem.description,
-        roleVisibility: roleVisibility !== undefined ? (roleVisibility || null) : existingFooterItem.roleVisibility
-      }
+        roleVisibility: roleVisibility !== undefined ? (roleVisibility || null) : existingFooterItem.roleVisibility,
+        subFooterId: subFooterId !== undefined ? (subFooterId === '' || subFooterId == null ? null : parseInt(subFooterId)) : existingFooterItem.subFooterId
+      },
+      include: { subFooter: true }
     });
     
     res.status(200).json({

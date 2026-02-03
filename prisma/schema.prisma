@@ -360,27 +360,30 @@ model MainFooter {
   updatedAt DateTime @updatedAt
 }
 
-// SubFooter model
+// SubFooter model (parent)
 model SubFooter {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  status    String   @default("active") @db.NVarChar(20)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  status      String       @default("active") @db.NVarChar(20)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  footerItems FooterItem[] // One-to-many: one SubFooter has many FooterItems
 }
 
-// FooterItem model
+// FooterItem model (child)
 model FooterItem {
-  id              Int      @id @default(autoincrement())
+  id              Int       @id @default(autoincrement())
   name            String
-  url             String?  @db.NVarChar(500)
-  openIn          String?  @db.NVarChar(20) // e.g., "_blank", "_self", "_parent", "_top"
-  icon            String?  // Path to the icon file  
+  url             String?   @db.NVarChar(500)
+  openIn          String?   @db.NVarChar(20) // e.g., "_blank", "_self", "_parent", "_top"
+  icon            String?  // Path to the icon file
   textIcon        String?  // Text icon field
   description     String?  @db.NVarChar(Max)
   roleVisibility  String?  @db.NVarChar(Max) // JSON string or comma-separated role IDs
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  subFooterId     Int?      // Foreign key to parent SubFooter
+  subFooter       SubFooter? @relation(fields: [subFooterId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
 
 // Location model
