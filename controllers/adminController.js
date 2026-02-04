@@ -112,7 +112,7 @@ exports.signup = async (req, res) => {
   }
 };
 
-// Admin login controller
+// Admin login controller (now direct login without OTP)
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -146,28 +146,9 @@ exports.login = async (req, res) => {
         error: 'Your account is pending approval. Please wait for administrator approval.' 
       });
     }
-    
-    // Generate OTP, persist it, and send via email
-    const otp = generateOtp();
-    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 
-    await Admin.setLoginOtp(admin.id, otp, expiresAt);
-
-    const emailResult = await sendOtpEmail({
-      toEmail: admin.email,
-      otp,
-      expiresAt
-    });
-
-    if (emailResult?.error) {
-      console.error('Failed to send OTP email:', emailResult.details || emailResult.error);
-      return res.status(500).json({ error: 'Unable to deliver OTP email. Try again later.' });
-    }
-
-    res.status(200).json({
-      message: 'OTP sent to registered email. Please verify to complete login.',
-      otpExpiresAt: expiresAt
-    });
+    // Directly generate JWT token and complete login (no OTP step)
+    return generateTokenAndResponse(admin, res);
   } catch (error) {
     console.error('Error during admin login:', error);
     res.status(500).json({ error: 'Internal server error' });
