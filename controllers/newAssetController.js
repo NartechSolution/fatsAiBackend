@@ -7,6 +7,9 @@ exports.uploadNewAssetImage = upload.single('image');
 // Create a new NewAsset
 exports.createNewAsset = async (req, res) => {
   try {
+    const user = req.user || req.admin || {};
+    const isAdmin = user.role === 'admin' || !!user.adminId;
+    
     const {
       name,
       assetCategoryId,
@@ -19,6 +22,7 @@ exports.createNewAsset = async (req, res) => {
       warrantyExpiry,
       locationId,
       description,
+      userId, // Optional: can be passed in body, or auto-set for members
     } = req.body;
 
     // Validate required fields
@@ -96,6 +100,13 @@ exports.createNewAsset = async (req, res) => {
     const parsedPurchaseDate = purchaseDate ? new Date(purchaseDate) : null;
     const parsedWarrantyExpiry = warrantyExpiry ? new Date(warrantyExpiry) : null;
 
+    // Determine userId: use provided userId, or auto-set for members
+    let finalUserId = userId || null;
+    if (!isAdmin && user.userId) {
+      // If member is creating asset, automatically assign to their userId
+      finalUserId = user.userId;
+    }
+
     // Create asset - try without include first to avoid relation issues
     const newAsset = await prisma.newAsset.create({
       data: {
@@ -111,6 +122,7 @@ exports.createNewAsset = async (req, res) => {
         employeeId: parseInt(employeeId, 10),
         assetConditionId: parseInt(assetConditionId, 10),
         locationId: parseInt(locationId, 10),
+        userId: finalUserId, // Set userId for member assets
       },
     });
 
@@ -123,6 +135,7 @@ exports.createNewAsset = async (req, res) => {
         employee: true,
         assetCondition: true,
         location: true,
+        user: true, // Include user relation
       },
     });
 
@@ -155,39 +168,19 @@ exports.getAllNewAssets = async (req, res) => {
 
     let where = {};
 
-    // For non-admin users (members), restrict to their own assets
+    // For non-admin users (members/Users), filter by userId
+    // Members can only see assets assigned to them (where userId matches)
     if (!isAdmin) {
-      // Member tokens should have email in the payload
-      if (!user.email) {
-        console.log('Member token missing email:', { userKeys: Object.keys(user), user });
+      // Member is a User - filter by userId
+      if (!user.userId) {
         return res.status(400).json({
           success: false,
-          message: 'User email not found in token. Cannot determine employee.',
-          debug: { userKeys: Object.keys(user) }, // Debug info
+          message: 'User ID not found in token. Cannot determine user assets.',
         });
       }
-
-      console.log('Looking for employee with email:', user.email);
       
-      // Find the employee record that matches the logged-in user's email
-      // SQL Server: Use exact match (case-sensitive by default)
-      const employee = await prisma.employeeList.findFirst({
-        where: { email: user.email },
-      });
-
-      // If there is no matching employee, return an empty list (no assigned assets)
-      if (!employee) {
-        console.log('No employee found for email:', user.email);
-        return res.status(200).json({
-          success: true,
-          count: 0,
-          data: [],
-          message: `No employee record found for email: ${user.email}. Please ensure your email matches an employee record.`,
-        });
-      }
-
-      console.log('Found employee:', { id: employee.id, email: employee.email, name: `${employee.firstName} ${employee.lastName}` });
-      where = { employeeId: employee.id };
+      console.log('Member (User) access - filtering assets for userId:', user.userId);
+      where = { userId: user.userId };
     } else {
       console.log('Admin access - returning all assets');
     }
@@ -201,6 +194,7 @@ exports.getAllNewAssets = async (req, res) => {
         employee: true,
         assetCondition: true,
         location: true,
+        user: true, // Include user relation
       },
     });
 
@@ -234,6 +228,7 @@ exports.getNewAssetById = async (req, res) => {
         employee: true,
         assetCondition: true,
         location: true,
+        user: true, // Include user relation
       },
     });
 
@@ -274,6 +269,7 @@ exports.updateNewAsset = async (req, res) => {
       warrantyExpiry,
       locationId,
       description,
+      userId, // Optional: can update userId
     } = req.body;
 
     const existing = await prisma.newAsset.findUnique({
@@ -384,6 +380,8 @@ exports.updateNewAsset = async (req, res) => {
             : existing.assetConditionId,
         locationId:
           locationId !== undefined ? parseInt(locationId, 10) : existing.locationId,
+        userId:
+          userId !== undefined ? userId : existing.userId,
       },
       include: {
         assetCategory: true,
@@ -391,6 +389,7 @@ exports.updateNewAsset = async (req, res) => {
         employee: true,
         assetCondition: true,
         location: true,
+        user: true, // Include user relation
       },
     });
 

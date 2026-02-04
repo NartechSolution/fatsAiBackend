@@ -93,6 +93,7 @@ model User {
   documents_uploaded MemberDocument[]   @relation("UploadedByMember")
   manageLocations    ManageLocation[]
   maintenances       Maintenance[]
+  newAssets          NewAsset[]          // One-to-many: one User has many NewAssets
   
   @@map("users")
 }
@@ -1062,6 +1063,9 @@ model NewAsset {
 
   locationId       Int
   location         City            @relation(fields: [locationId], references: [id])
+
+  userId           String?        // Optional: link to User model for member assets
+  user             User?           @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   // Relations
   logMaintenances  LogMaintenance[]
