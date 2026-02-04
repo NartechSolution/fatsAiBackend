@@ -83,7 +83,10 @@ exports.createNewAsset = async (req, res) => {
     if (!city) {
       return res
         .status(404)
-        .json({ success: false, message: 'City not found' });
+        .json({ 
+          success: false, 
+          message: `City with id ${locationId} not found. Please ensure the city exists before creating an asset.` 
+        });
     }
 
     // Image
@@ -93,6 +96,7 @@ exports.createNewAsset = async (req, res) => {
     const parsedPurchaseDate = purchaseDate ? new Date(purchaseDate) : null;
     const parsedWarrantyExpiry = warrantyExpiry ? new Date(warrantyExpiry) : null;
 
+    // Create asset - try without include first to avoid relation issues
     const newAsset = await prisma.newAsset.create({
       data: {
         name,
@@ -108,6 +112,11 @@ exports.createNewAsset = async (req, res) => {
         assetConditionId: parseInt(assetConditionId, 10),
         locationId: parseInt(locationId, 10),
       },
+    });
+
+    // Fetch with relations separately to avoid foreign key constraint issues
+    const newAssetWithRelations = await prisma.newAsset.findUnique({
+      where: { id: newAsset.id },
       include: {
         assetCategory: true,
         department: true,
@@ -120,7 +129,7 @@ exports.createNewAsset = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'New asset created successfully',
-      data: newAsset,
+      data: newAssetWithRelations,
     });
   } catch (error) {
     console.error('Error creating new asset:', error);
