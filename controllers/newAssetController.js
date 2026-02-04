@@ -146,37 +146,50 @@ exports.createNewAsset = async (req, res) => {
 // - Members (regular users): see only assets assigned to their employee record (matched by email)
 exports.getAllNewAssets = async (req, res) => {
   try {
-    const user = req.user || {};
-
+    // Check both req.user (from verifyToken) and req.admin (from verifyAdminToken)
+    const user = req.user || req.admin || {};
+    
     // Determine if the requester is an admin (based on admin JWT payload)
+    // Admin tokens have adminId and role: 'admin'
     const isAdmin = user.role === 'admin' || !!user.adminId;
 
     let where = {};
 
-    // For non-admin users, restrict to their own assets
+    // For non-admin users (members), restrict to their own assets
     if (!isAdmin) {
+      // Member tokens should have email in the payload
       if (!user.email) {
+        console.log('Member token missing email:', { userKeys: Object.keys(user), user });
         return res.status(400).json({
           success: false,
           message: 'User email not found in token. Cannot determine employee.',
+          debug: { userKeys: Object.keys(user) }, // Debug info
         });
       }
 
+      console.log('Looking for employee with email:', user.email);
+      
       // Find the employee record that matches the logged-in user's email
+      // SQL Server: Use exact match (case-sensitive by default)
       const employee = await prisma.employeeList.findFirst({
         where: { email: user.email },
       });
 
       // If there is no matching employee, return an empty list (no assigned assets)
       if (!employee) {
+        console.log('No employee found for email:', user.email);
         return res.status(200).json({
           success: true,
           count: 0,
           data: [],
+          message: `No employee record found for email: ${user.email}. Please ensure your email matches an employee record.`,
         });
       }
 
+      console.log('Found employee:', { id: employee.id, email: employee.email, name: `${employee.firstName} ${employee.lastName}` });
       where = { employeeId: employee.id };
+    } else {
+      console.log('Admin access - returning all assets');
     }
 
     const newAssets = await prisma.newAsset.findMany({
@@ -190,6 +203,8 @@ exports.getAllNewAssets = async (req, res) => {
         location: true,
       },
     });
+
+    console.log(`Found ${newAssets.length} assets for ${isAdmin ? 'admin' : 'member'} user`);
 
     res.status(200).json({
       success: true,
