@@ -397,7 +397,6 @@ model Location {
   locationCode String    @unique
   assets       Asset[]   // One-to-many relationship with Asset
   manageLocations ManageLocation[] // One-to-many relationship with ManageLocation
-  newAssets    NewAsset[] // One-to-many relationship with NewAsset
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -504,6 +503,7 @@ model City {
 
   // Relations
   departments Department[]
+  newAssets   NewAsset[]   // One-to-many: one City has many NewAssets
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -1061,7 +1061,7 @@ model NewAsset {
   assetCondition   AssetCondition  @relation(fields: [assetConditionId], references: [id])
 
   locationId       Int
-  location         Location        @relation(fields: [locationId], references: [id])
+  location         City            @relation(fields: [locationId], references: [id])
 
   // Relations
   logMaintenances  LogMaintenance[]

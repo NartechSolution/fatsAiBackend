@@ -76,13 +76,14 @@ exports.createNewAsset = async (req, res) => {
         .json({ success: false, message: 'AssetCondition not found' });
     }
 
-    const location = await prisma.location.findUnique({
+    // locationId now refers to a City record
+    const city = await prisma.city.findUnique({
       where: { id: parseInt(locationId, 10) },
     });
-    if (!location) {
+    if (!city) {
       return res
         .status(404)
-        .json({ success: false, message: 'Location not found' });
+        .json({ success: false, message: 'City not found' });
     }
 
     // Image
@@ -307,14 +308,15 @@ exports.updateNewAsset = async (req, res) => {
       }
     }
 
+    // When updating, locationId continues to refer to a City record
     if (locationId) {
-      const location = await prisma.location.findUnique({
+      const city = await prisma.city.findUnique({
         where: { id: parseInt(locationId, 10) },
       });
-      if (!location) {
+      if (!city) {
         return res
           .status(404)
-          .json({ success: false, message: 'Location not found' });
+          .json({ success: false, message: 'City not found' });
       }
     }
 
