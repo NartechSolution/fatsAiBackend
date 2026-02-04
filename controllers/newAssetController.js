@@ -132,9 +132,45 @@ exports.createNewAsset = async (req, res) => {
 };
 
 // Get all NewAssets
+// - Admins: see all assets
+// - Members (regular users): see only assets assigned to their employee record (matched by email)
 exports.getAllNewAssets = async (req, res) => {
   try {
+    const user = req.user || {};
+
+    // Determine if the requester is an admin (based on admin JWT payload)
+    const isAdmin = user.role === 'admin' || !!user.adminId;
+
+    let where = {};
+
+    // For non-admin users, restrict to their own assets
+    if (!isAdmin) {
+      if (!user.email) {
+        return res.status(400).json({
+          success: false,
+          message: 'User email not found in token. Cannot determine employee.',
+        });
+      }
+
+      // Find the employee record that matches the logged-in user's email
+      const employee = await prisma.employeeList.findFirst({
+        where: { email: user.email },
+      });
+
+      // If there is no matching employee, return an empty list (no assigned assets)
+      if (!employee) {
+        return res.status(200).json({
+          success: true,
+          count: 0,
+          data: [],
+        });
+      }
+
+      where = { employeeId: employee.id };
+    }
+
     const newAssets = await prisma.newAsset.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       include: {
         assetCategory: true,
