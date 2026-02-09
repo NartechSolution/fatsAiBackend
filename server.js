@@ -21,6 +21,7 @@ const assetRoutes = require('./routes/assetRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const subCategoryRoutes = require('./routes/subCategoryRoutes');
 const locationRoutes = require('./routes/locationRoutes');
+const locationTagRoutes = require('./routes/locationTagRoutes');
 const vibrationSensorRoutes = require('./routes/vibrationSensorRoutes');
 const megaMenuRoutes = require('./routes/megaMenuRoutes');
 const subMegaMenuRoutes = require('./routes/subMegaMenuRoutes');
@@ -166,6 +167,7 @@ async function startServer() {
     app.use('/api/categories', categoryRoutes);
     app.use('/api/subcategories', subCategoryRoutes);
     app.use('/api/locations', locationRoutes);
+    app.use('/api/location-tags', locationTagRoutes);
     app.use('/api/vibration', vibrationSensorRoutes);
     app.use('/api/megamenu', megaMenuRoutes);
     app.use('/api/submegamenu', subMegaMenuRoutes);

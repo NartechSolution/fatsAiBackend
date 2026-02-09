@@ -402,6 +402,20 @@ model Location {
   updatedAt    DateTime  @updatedAt
 }
 
+// LocationTag model
+model LocationTag {
+  id           Int       @id @default(autoincrement())
+  company      String    @db.NVarChar(Max)
+  building     String    @db.NVarChar(100)
+  level        String    @db.NVarChar(50)
+  officeRoom   String    @db.NVarChar(100)
+  locationCode String    @unique @db.NVarChar(500)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  @@map("locationTags")
+}
+
 // MegaMenu model
 model MegaMenu {
   id          Int           @id @default(autoincrement())
