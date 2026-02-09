@@ -19,12 +19,12 @@ router.get('/:id', iotDeviceController.getIotDeviceById);
 
 // Update IoT device with image upload (protected route)
 router.put('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   iotDeviceController.uploadIotDeviceImage,
   iotDeviceController.updateIotDevice
 );
 
 // Delete IoT device (protected route)
-router.delete('/:id', authMiddleware.verifyAdminToken, iotDeviceController.deleteIotDevice);
+router.delete('/:id', authMiddleware.verifyToken, iotDeviceController.deleteIotDevice);
 
 module.exports = router;

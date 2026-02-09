@@ -27,11 +27,11 @@ router.get('/history/:iotDeviceAssetId', transferAssetController.getTransferHist
 
 // Update transfer asset (protected route)
 router.put('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   transferAssetController.updateTransferAsset
 );
 
 // Delete transfer asset (protected route)
-router.delete('/:id', authMiddleware.verifyAdminToken, transferAssetController.deleteTransferAsset);
+router.delete('/:id', authMiddleware.verifyToken, transferAssetController.deleteTransferAsset);
 
 module.exports = router;

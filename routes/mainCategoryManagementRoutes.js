@@ -41,14 +41,14 @@ router.get('/:id', mainCategoryManagementController.getMainCategoryManagementByI
 
 // Update main category management (protected route with file upload)
 router.put('/:id',
-  authMiddleware.verifyAdminToken,
+  authMiddleware.verifyToken,
   upload.single('icon'),
   mainCategoryManagementController.updateMainCategoryManagement
 );
 
 // Delete main category management (protected route)
 router.delete('/:id',
-  authMiddleware.verifyAdminToken,
+  authMiddleware.verifyToken,
   mainCategoryManagementController.deleteMainCategoryManagement
 );
 

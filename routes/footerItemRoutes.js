@@ -20,14 +20,14 @@ router.get('/:id', footerItemController.getFooterItemById);
 
 // Update footer item (protected route with file upload)
 router.put('/:id',
-  authMiddleware.verifyAdminToken,
+  authMiddleware.verifyToken,
   upload.single('icon'),
   footerItemController.updateFooterItem
 );
 
 // Delete footer item (protected route)
 router.delete('/:id',
-  authMiddleware.verifyAdminToken,
+  authMiddleware.verifyToken,
   footerItemController.deleteFooterItem
 );
 

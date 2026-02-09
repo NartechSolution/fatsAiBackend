@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pageController = require('../controllers/pageController');
-const { verifyAdminToken } = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 
@@ -125,7 +125,7 @@ const dynamicUpload = (req, res, next) => {
 // @access  Private/Admin
 router.post(
   '/',
-  verifyAdminToken,
+  verifyToken,
   determineUploadFields,
   dynamicUpload,
   pageController.createPage
@@ -136,7 +136,7 @@ router.post(
 // @access  Private/Admin
 router.put(
   '/',
-  verifyAdminToken,
+  verifyToken,
   determineUploadFields,
   dynamicUpload,
   pageController.updatePage
@@ -160,6 +160,6 @@ router.get('/templates', pageController.getTemplates);
 // @route   DELETE /api/pages/:id
 // @desc    Delete a page
 // @access  Private/Admin
-router.delete('/:id', verifyAdminToken, pageController.deletePage);
+router.delete('/:id', verifyToken, pageController.deletePage);
 
 module.exports = router;

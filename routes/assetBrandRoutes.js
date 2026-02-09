@@ -21,7 +21,7 @@ router.get('/:id', assetBrandController.getAssetBrandById);
 // Update an asset brand - Admin protected, logo optional
 router.put(
   '/:id',
-  authMiddleware.verifyAdminToken,
+  authMiddleware.verifyToken,
   upload.single('logo'),
   assetBrandController.updateAssetBrand
 );
@@ -29,7 +29,7 @@ router.put(
 // Delete an asset brand - Admin protected
 router.delete(
   '/:id',
-  authMiddleware.verifyAdminToken,
+  authMiddleware.verifyToken,
   assetBrandController.deleteAssetBrand
 );
 

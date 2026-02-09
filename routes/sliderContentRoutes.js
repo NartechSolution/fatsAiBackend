@@ -23,14 +23,14 @@ router.get('/:id', sliderContentController.getSliderContentById);
 
 // Update slider content (protected route with file upload)
 router.put('/:id', 
-  authMiddleware.verifyAdminToken,
+  authMiddleware.verifyToken,
   upload.single('backgroundImage'),
   sliderContentController.updateSliderContent
 );
 
 // Delete slider content (protected route)
 router.delete('/:id', 
-  authMiddleware.verifyAdminToken,
+  authMiddleware.verifyToken,
   sliderContentController.deleteSliderContent
 );
 

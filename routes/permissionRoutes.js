@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const permissionController = require('../controllers/permissionController');
-const { verifyAdminToken } = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 
 // Create a new permission - protected route
-router.post('/', verifyAdminToken, permissionController.createPermission);
+router.post('/', verifyToken, permissionController.createPermission);
 
 // Get all permissions
 router.get('/', permissionController.getAllPermissions);
@@ -16,13 +16,13 @@ router.get('/grouped', permissionController.getPermissionsByCategory);
 router.get('/category/:categoryId', permissionController.getPermissionsByCategoryId);
 
 // Get permission by ID - protected route
-router.get('/:id', verifyAdminToken, permissionController.getPermissionById);
+router.get('/:id', verifyToken, permissionController.getPermissionById);
 
 // Update permission - protected route
-router.put('/:id', verifyAdminToken, permissionController.updatePermission);
+router.put('/:id', verifyToken, permissionController.updatePermission);
 
 // Delete permission - protected route
-router.delete('/:id', verifyAdminToken, permissionController.deletePermission);
+router.delete('/:id', verifyToken, permissionController.deletePermission);
 
 module.exports = router;
 

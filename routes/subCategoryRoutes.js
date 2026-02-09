@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const subCategoryController = require('../controllers/subCategoryController');
-const { verifyAdminToken } = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 
 // Get all subcategories - public access
 router.get('/', subCategoryController.getAllSubCategories);
@@ -13,12 +13,12 @@ router.get('/category/:categoryId', subCategoryController.getSubCategoriesByCate
 router.get('/:id', subCategoryController.getSubCategoryById);
 
 // Create new subcategory - protected route
-router.post('/', verifyAdminToken, subCategoryController.createSubCategory);
+router.post('/', verifyToken, subCategoryController.createSubCategory);
 
 // Update subcategory - protected route
-router.put('/:id', verifyAdminToken, subCategoryController.updateSubCategory);
+router.put('/:id', verifyToken, subCategoryController.updateSubCategory);
 
 // Delete subcategory - protected route
-router.delete('/:id', verifyAdminToken, subCategoryController.deleteSubCategory);
+router.delete('/:id', verifyToken, subCategoryController.deleteSubCategory);
 
 module.exports = router; 

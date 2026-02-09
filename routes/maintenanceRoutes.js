@@ -30,11 +30,11 @@ router.get('/technician/:technicianId', maintenanceController.getMaintenancesByT
 
 // Update maintenance record (protected route)
 router.put('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   maintenanceController.updateMaintenance
 );
 
 // Delete maintenance record (protected route)
-router.delete('/:id', authMiddleware.verifyAdminToken, maintenanceController.deleteMaintenance);
+router.delete('/:id', authMiddleware.verifyToken, maintenanceController.deleteMaintenance);
 
 module.exports = router;

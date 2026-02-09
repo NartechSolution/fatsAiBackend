@@ -18,13 +18,13 @@ router.get('/:id', categoryManagementTypeController.getCategoryManagementTypeByI
 
 // Update category management type (protected route)
 router.put('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   categoryManagementTypeController.updateCategoryManagementType
 );
 
 // Delete category management type (protected route)
 router.delete('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   categoryManagementTypeController.deleteCategoryManagementType
 );
 

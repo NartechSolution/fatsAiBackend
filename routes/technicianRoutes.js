@@ -21,17 +21,17 @@ router.get('/:id', technicianController.getTechnicianById);
 
 // Update technician (protected route)
 router.put('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   technicianController.updateTechnician
 );
 
 // Update technician status (protected route)
 router.patch('/:id/status', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   technicianController.updateTechnicianStatus
 );
 
 // Delete technician (protected route)
-router.delete('/:id', authMiddleware.verifyAdminToken, technicianController.deleteTechnician);
+router.delete('/:id', authMiddleware.verifyToken, technicianController.deleteTechnician);
 
 module.exports = router;

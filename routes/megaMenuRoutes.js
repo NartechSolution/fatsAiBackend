@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const megaMenuController = require('../controllers/megaMenuController');
-const { verifyAdminToken } = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 
 // @route   POST /api/megamenu
 // @desc    Create a new mega menu
 // @access  Private
-router.post('/', verifyAdminToken, megaMenuController.uploadMegaMenuIcon, megaMenuController.createMegaMenu);
+router.post('/', verifyToken, megaMenuController.uploadMegaMenuIcon, megaMenuController.createMegaMenu);
 
 // @route   GET /api/megamenu
 // @desc    Get all mega menus
@@ -21,11 +21,11 @@ router.get('/:id', megaMenuController.getMegaMenu);
 // @route   PUT /api/megamenu/:id
 // @desc    Update a mega menu
 // @access  Private
-router.put('/:id', verifyAdminToken, megaMenuController.uploadMegaMenuIcon, megaMenuController.updateMegaMenu);
+router.put('/:id', verifyToken, megaMenuController.uploadMegaMenuIcon, megaMenuController.updateMegaMenu);
 
 // @route   DELETE /api/megamenu/:id
 // @desc    Delete a mega menu
 // @access  Private
-router.delete('/:id', verifyAdminToken, megaMenuController.deleteMegaMenu);
+router.delete('/:id', verifyToken, megaMenuController.deleteMegaMenu);
 
 module.exports = router; 

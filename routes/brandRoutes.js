@@ -13,9 +13,9 @@ router.get('/', brandController.getAllBrands);
 router.get('/:id', brandController.getBrandById);
 
 // Update a brand - Protected route
-router.put('/:id', authMiddleware.verifyAdminToken, brandController.updateBrand);
+router.put('/:id', authMiddleware.verifyToken, brandController.updateBrand);
 
 // Delete a brand - Protected route
-router.delete('/:id', authMiddleware.verifyAdminToken, brandController.deleteBrand);
+router.delete('/:id', authMiddleware.verifyToken, brandController.deleteBrand);
 
 module.exports = router; 

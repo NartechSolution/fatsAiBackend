@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const cityController = require('../controllers/cityController');
-const { verifyAdminToken, verifyToken } = require('../middleware/auth');
+const {  verifyToken } = require('../middleware/auth');
 
 // Create a new city - admin only
 router.post('/', verifyToken,  cityController.createCity);

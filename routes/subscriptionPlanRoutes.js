@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { check } = require('express-validator');
 const subscriptionPlanController = require('../controllers/subscriptionPlanController');
-const { verifyAdminToken } = require('../middleware/auth');
+const { verifyToken } = require('../middleware/auth');
 
 // Validation rules
 const subscriptionPlanValidation = [
@@ -23,7 +23,7 @@ const subscriptionPlanValidation = [
 // @access  Private/Admin
 router.post(
   '/',
-  [verifyAdminToken, ...subscriptionPlanValidation],
+  [verifyToken, ...subscriptionPlanValidation],
   subscriptionPlanController.createSubscriptionPlan
 );
 
@@ -42,14 +42,14 @@ router.get('/:id', subscriptionPlanController.getSubscriptionPlanById);
 // @access  Private/Admin
 router.put(
   '/:id',
-  [verifyAdminToken, ...subscriptionPlanValidation],
+  [verifyToken, ...subscriptionPlanValidation],
   subscriptionPlanController.updateSubscriptionPlan
 );
 
 // @route   DELETE /api/subscription-plans/:id
 // @desc    Delete subscription plan
 // @access  Private/Admin
-router.delete('/:id', verifyAdminToken, subscriptionPlanController.deleteSubscriptionPlan);
+router.delete('/:id', verifyToken, subscriptionPlanController.deleteSubscriptionPlan);
 
 // @route   POST /api/subscription-plans/add-service
 // @desc    Add a service to a subscription plan
@@ -57,7 +57,7 @@ router.delete('/:id', verifyAdminToken, subscriptionPlanController.deleteSubscri
 router.post(
   '/add-service',
   [
-    verifyAdminToken,
+    verifyToken,
     check('planId', 'Plan ID is required').not().isEmpty(),
     check('serviceId', 'Service ID is required').not().isEmpty(),
     check('isIncluded', 'Is included must be a boolean').optional().isBoolean()
@@ -70,7 +70,7 @@ router.post(
 // @access  Private/Admin
 router.delete(
   '/:planId/services/:serviceId',
-  verifyAdminToken,
+  verifyToken,
   subscriptionPlanController.removePlanService
 );
 

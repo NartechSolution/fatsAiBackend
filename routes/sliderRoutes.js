@@ -18,13 +18,13 @@ router.get('/:id', sliderController.getSliderById);
 
 // Update slider (protected route)
 router.put('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   sliderController.updateSlider
 );
 
 // Delete slider (protected route)
 router.delete('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   sliderController.deleteSlider
 );
 

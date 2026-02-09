@@ -18,13 +18,13 @@ router.get('/:id', mainFooterController.getMainFooterById);
 
 // Update main footer (protected route)
 router.put('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   mainFooterController.updateMainFooter
 );
 
 // Delete main footer (protected route)
 router.delete('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   mainFooterController.deleteMainFooter
 );
 

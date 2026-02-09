@@ -34,14 +34,14 @@ router.get('/:id', logMaintenanceController.getLogMaintenanceById);
 // Update a log maintenance record (admin protected route)
 router.put(
   '/:id',
-  authMiddleware.verifyAdminToken,
+  authMiddleware.verifyToken,
   logMaintenanceController.updateLogMaintenance
 );
 
 // Delete a log maintenance record (admin protected route)
 router.delete(
   '/:id',
-  authMiddleware.verifyAdminToken,
+  authMiddleware.verifyToken,
   logMaintenanceController.deleteLogMaintenance
 );
 

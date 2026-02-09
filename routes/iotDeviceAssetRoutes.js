@@ -24,11 +24,11 @@ router.get('/asset-type/:assetTypeId', iotDeviceAssetController.getIotDeviceAsse
 
 // Update IoT device asset (protected route)
 router.put('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   iotDeviceAssetController.updateIotDeviceAsset
 );
 
 // Delete IoT device asset (protected route)
-router.delete('/:id', authMiddleware.verifyAdminToken, iotDeviceAssetController.deleteIotDeviceAsset);
+router.delete('/:id', authMiddleware.verifyToken, iotDeviceAssetController.deleteIotDeviceAsset);
 
 module.exports = router;

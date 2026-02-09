@@ -5,7 +5,7 @@ const auth = require('../middleware/auth');
 const { upload } = require('../utils/uploadUtils');
 
 // Create a new service - Admin only
-router.post('/', auth.verifyAdminToken, upload.single('icon'), serviceController.createService);
+router.post('/', auth.verifyToken, upload.single('icon'), serviceController.createService);
 
 // Get all services
 router.get('/', serviceController.getAllServices);
@@ -14,9 +14,9 @@ router.get('/', serviceController.getAllServices);
 router.get('/:id', serviceController.getServiceById);
 
 // Update service - Admin only
-router.put('/:id', auth.verifyAdminToken, upload.single('icon'), serviceController.updateService);
+router.put('/:id', auth.verifyToken, upload.single('icon'), serviceController.updateService);
 
 // Delete service - Admin only
-router.delete('/:id', auth.verifyAdminToken, serviceController.deleteService);
+router.delete('/:id', auth.verifyToken, serviceController.deleteService);
 
 module.exports = router;

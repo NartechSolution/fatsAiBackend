@@ -19,14 +19,14 @@ router.get('/:id', assetCategoryController.getAssetCategoryById);
 // Update an asset category - Admin protected
 router.put(
   '/:id',
-  authMiddleware.verifyAdminToken,
+  authMiddleware.verifyToken,
   assetCategoryController.updateAssetCategory
 );
 
 // Delete an asset category - Admin protected
 router.delete(
   '/:id',
-  authMiddleware.verifyAdminToken,
+  authMiddleware.verifyToken,
   assetCategoryController.deleteAssetCategory
 );
 

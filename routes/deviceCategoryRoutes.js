@@ -22,12 +22,12 @@ router.get('/:id/devices', deviceCategoryController.getIotDevicesByCategory);
 
 // Update device category with image upload (protected route)
 router.put('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   deviceCategoryController.uploadDeviceCategoryImage,
   deviceCategoryController.updateDeviceCategory
 );
 
 // Delete device category (protected route)
-router.delete('/:id', authMiddleware.verifyAdminToken, deviceCategoryController.deleteDeviceCategory);
+router.delete('/:id', authMiddleware.verifyToken, deviceCategoryController.deleteDeviceCategory);
 
 module.exports = router;

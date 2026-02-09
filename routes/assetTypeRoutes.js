@@ -18,11 +18,11 @@ router.get('/:id', assetTypeController.getAssetTypeById);
 
 // Update asset type (protected route)
 router.put('/:id', 
-  authMiddleware.verifyAdminToken, 
+  authMiddleware.verifyToken, 
   assetTypeController.updateAssetType
 );
 
 // Delete asset type (protected route)
-router.delete('/:id', authMiddleware.verifyAdminToken, assetTypeController.deleteAssetType);
+router.delete('/:id', authMiddleware.verifyToken, assetTypeController.deleteAssetType);
 
 module.exports = router;
