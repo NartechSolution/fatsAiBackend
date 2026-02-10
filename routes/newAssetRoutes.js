@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const newAssetController = require('../controllers/newAssetController');
 const { verifyToken } = require('../middleware/auth');
+const { uploadDocuments } = require('../utils/uploadUtils');
 
 // Create a new asset with image upload
 // Expects multipart/form-data with 'image' as file field
@@ -10,6 +11,15 @@ router.post(
   verifyToken,
   newAssetController.uploadNewAssetImage,
   newAssetController.createNewAsset
+);
+
+// Bulk import assets via Excel file
+// Expects multipart/form-data with 'file' as the Excel document field
+router.post(
+  '/import',
+  verifyToken,
+  uploadDocuments.single('file'),
+  newAssetController.importNewAssetsFromExcel
 );
 
 // Get all new assets

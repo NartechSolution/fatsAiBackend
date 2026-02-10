@@ -1,5 +1,8 @@
 const prisma = require('../prisma/client');
 const { upload, getImageUrl } = require('../utils/uploadUtils');
+const ExcelJS = require('exceljs');
+const fs = require('fs');
+const path = require('path');
 
 // Middleware for handling file uploads (image field)
 exports.uploadNewAssetImage = upload.single('image');
@@ -151,6 +154,235 @@ exports.createNewAsset = async (req, res) => {
       message: 'Failed to create new asset',
       error: error.message,
     });
+  }
+};
+
+// Helper to normalize Excel header names (case/space/underscore insensitive)
+const normalizeHeader = (header) => {
+  if (!header) return '';
+  return String(header)
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]/g, '');
+};
+
+// Helper to safely parse integer IDs
+const parseIntSafe = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const num = parseInt(value, 10);
+  return Number.isNaN(num) ? null : num;
+};
+
+// Helper to parse date cells from Excel
+const parseDateCell = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof value === 'object' && value.text) {
+    const d = new Date(value.text);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+};
+
+// Bulk import NewAssets from an uploaded Excel file
+// POST /api/new-assets/import
+// Expects multipart/form-data with field: file (XLS/XLSX/CSV)
+exports.importNewAssetsFromExcel = async (req, res) => {
+  let uploadedFilePath = null;
+
+  try {
+    const user = req.user || req.admin || {};
+    const isAdmin = user.role === 'admin' || !!user.adminId;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Excel file is required in "file" field',
+      });
+    }
+
+    uploadedFilePath = req.file.path;
+
+    const workbook = new ExcelJS.Workbook();
+    const ext = path.extname(uploadedFilePath || '').toLowerCase();
+
+    // Support both Excel workbooks and CSV files
+    if (ext === '.csv') {
+      await workbook.csv.readFile(uploadedFilePath);
+    } else {
+      await workbook.xlsx.readFile(uploadedFilePath);
+    }
+
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      return res.status(400).json({
+        success: false,
+        message: 'No worksheet found in uploaded file',
+      });
+    }
+
+    // Build header map from first row
+    const headerRow = worksheet.getRow(1);
+    const headerMap = {};
+    headerRow.eachCell((cell, colNumber) => {
+      const normalized = normalizeHeader(cell.value);
+      if (normalized) {
+        headerMap[normalized] = colNumber;
+      }
+    });
+
+    // Required columns (normalized names)
+    const requiredHeaders = [
+      'name',
+      'assetcategoryid',
+      'serialno',
+      'departmentid',
+      'employeeid',
+      'status',
+      'assetconditionid',
+      'locationid',
+    ];
+
+    const missingHeaders = requiredHeaders.filter(
+      (key) => !headerMap[key]
+    );
+
+    if (missingHeaders.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'Missing required columns in Excel header row. Required (case-insensitive, spaces/underscores ignored): name, assetCategoryId, serialNo, departmentId, employeeId, status, assetConditionId, locationId',
+        missingHeaders,
+      });
+    }
+
+    const getCellValue = (row, normalizedKey) => {
+      const col = headerMap[normalizedKey];
+      if (!col) return null;
+      const cell = row.getCell(col);
+      const value = cell.value;
+      if (value && typeof value === 'object' && value.text) {
+        return value.text;
+      }
+      return value;
+    };
+
+    const assetsToCreate = [];
+
+    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      if (rowNumber === 1) return; // skip header
+
+      const name = getCellValue(row, 'name');
+      const serialNo = getCellValue(row, 'serialno');
+
+      // Skip completely empty or invalid rows
+      if (!name && !serialNo) {
+        return;
+      }
+
+      const assetCategoryId = parseIntSafe(
+        getCellValue(row, 'assetcategoryid')
+      );
+      const departmentId = parseIntSafe(
+        getCellValue(row, 'departmentid')
+      );
+      const employeeId = parseIntSafe(
+        getCellValue(row, 'employeeid')
+      );
+      const status = getCellValue(row, 'status');
+      const assetConditionId = parseIntSafe(
+        getCellValue(row, 'assetconditionid')
+      );
+      const locationId = parseIntSafe(
+        getCellValue(row, 'locationid')
+      );
+      const description = getCellValue(row, 'description');
+      const purchaseDate = parseDateCell(
+        getCellValue(row, 'purchasedate')
+      );
+      const warrantyExpiry = parseDateCell(
+        getCellValue(row, 'warrantyexpiry')
+      );
+
+      // For admins, allow userId column; for members, always use their own userId
+      let rowUserId = null;
+      if (isAdmin) {
+        const userIdCell = getCellValue(row, 'userid');
+        if (userIdCell !== null && userIdCell !== undefined && userIdCell !== '') {
+          rowUserId = userIdCell;
+        }
+      } else if (user.userId) {
+        rowUserId = user.userId;
+      }
+
+      // Basic per-row validation of required fields
+      if (
+        !name ||
+        !assetCategoryId ||
+        !serialNo ||
+        !departmentId ||
+        !employeeId ||
+        !status ||
+        !assetConditionId ||
+        !locationId
+      ) {
+        // Skip invalid/incomplete row
+        return;
+      }
+
+      assetsToCreate.push({
+        name,
+        serialNo,
+        status,
+        description: description || null,
+        image: null,
+        purchaseDate,
+        warrantyExpiry,
+        assetCategoryId,
+        departmentId,
+        employeeId,
+        assetConditionId,
+        locationId,
+        userId: rowUserId,
+      });
+    });
+
+    if (assetsToCreate.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'No valid asset rows found in Excel file. Please ensure required columns are filled.',
+      });
+    }
+
+    const result = await prisma.newAsset.createMany({
+      data: assetsToCreate,
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'New assets imported successfully from Excel',
+      summary: {
+        rowsProcessed: assetsToCreate.length,
+        rowsInserted: result.count,
+      },
+    });
+  } catch (error) {
+    console.error('Error importing new assets from Excel:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to import new assets from Excel',
+      error: error.message,
+    });
+  } finally {
+    // Clean up uploaded file
+    if (uploadedFilePath) {
+      fs.unlink(uploadedFilePath, () => {});
+    }
   }
 };
 
