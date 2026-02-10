@@ -86,6 +86,7 @@ model User {
   cvc                 String? @db.NVarChar(4)
   expireDate          String? @db.NVarChar(10)
   paymentType         String? @default("bankTransfer") @db.NVarChar(20)
+  paymentSlipe        String? @db.NVarChar(Max)
 
   // Relations
   user_subscriptions UserSubscription[]

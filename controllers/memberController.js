@@ -3,6 +3,7 @@ const { createError } = require('../utils/createError');
 const path = require('path');
 const fs = require('fs');
 const { logActivity } = require('../utils/auditLogger');
+const { getDocumentUrl } = require('../utils/uploadUtils');
 
 /**
  * Get members list with pagination, search, and filtering
@@ -123,6 +124,7 @@ exports.getMembers = async (req, res) => {
         },
         status: subscription?.status || 'inactive',
         paymentStatus: subscription?.paymentStatus || 'pending',
+        paymentSlipe: member.paymentSlipe,
         createdAt: member.createdAt,
         updatedAt: member.updatedAt
       };
@@ -282,6 +284,7 @@ exports.getMemberById = async (req, res) => {
       industryTypes: member.industry_types ? JSON.parse(member.industry_types) : [],
       membershipCategory: member.membership_category,
       image: member.image,
+      paymentSlipe: member.paymentSlipe,
       subscription: activeSubscription ? {
         id: activeSubscription.id,
         plan: {
@@ -747,6 +750,74 @@ exports.getMemberInvoice = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch invoice',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Upload or update member payment slip
+ * POST /api/auth/members/:id/payment-slip
+ * Form field: paymentSlipe (file)
+ */
+exports.uploadPaymentSlipe = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Ensure file is provided
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'paymentSlipe file is required'
+      });
+    }
+
+    // Check if member exists
+    const member = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!member) {
+      return res.status(404).json({
+        success: false,
+        message: 'Member not found'
+      });
+    }
+
+    // Build document URL/path for stored file
+    const paymentSlipePath = getDocumentUrl(req.file.filename);
+
+    // Update member with payment slip path (optional field)
+    const updatedMember = await prisma.user.update({
+      where: { id },
+      data: {
+        paymentSlipe: paymentSlipePath
+      }
+    });
+
+    // Log activity
+    const adminId = req.admin?.adminId || 'system';
+    logActivity(
+      'Member Payment Slip Uploaded',
+      adminId,
+      updatedMember.email,
+      'Success',
+      `Payment slip uploaded for member ${updatedMember.email}`
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Payment slip uploaded successfully',
+      data: {
+        id: updatedMember.id,
+        paymentSlipe: updatedMember.paymentSlipe
+      }
+    });
+  } catch (error) {
+    console.error('Error uploading payment slip:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to upload payment slip',
       error: error.message
     });
   }

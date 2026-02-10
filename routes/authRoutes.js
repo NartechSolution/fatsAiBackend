@@ -3,7 +3,7 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const memberController = require('../controllers/memberController');
 const authMiddleware = require('../middleware/auth');
-const { upload } = require('../utils/uploadUtils');
+const { upload, uploadDocuments } = require('../utils/uploadUtils');
 
 // Auth routes
 router.post('/signup', authController.signup);
@@ -27,5 +27,13 @@ router.put('/members/:id', authMiddleware.verifyToken, memberController.updateMe
 router.put('/members/:id/status', authMiddleware.verifyToken, memberController.updateMemberStatus);
 router.delete('/members/:id', authMiddleware.verifyToken, memberController.deleteMember);
 router.get('/members/:id/invoice', authMiddleware.verifyToken, memberController.getMemberInvoice);
+
+// Member payment slip upload
+router.post(
+  '/members/:id/payment-slip',
+  authMiddleware.verifyToken,
+  uploadDocuments.single('paymentSlipe'),
+  memberController.uploadPaymentSlipe
+);
 
 module.exports = router;
