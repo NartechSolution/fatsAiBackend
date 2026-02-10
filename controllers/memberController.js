@@ -697,8 +697,23 @@ exports.getMemberInvoice = async (req, res) => {
       });
     }
 
-    // Construct full file path
-    const filePath = path.join(__dirname, '..', invoiceDocument.documentPath);
+    // Construct full file path.
+    // NOTE: `documentPath` is stored like `/uploads/...` (leading slash).
+    // On Windows, `path.join(__dirname, '..', '/uploads/...')` ignores previous segments,
+    // resulting in `C:\uploads\...` which doesn't exist in this project.
+    const backendRoot = path.resolve(__dirname, '..');
+    const relativeDocumentPath = String(invoiceDocument.documentPath || '')
+      .replace(/^[/\\]+/, '') // drop any leading "/" or "\"
+      .replace(/\0/g, ''); // basic null-byte hardening
+    const filePath = path.resolve(backendRoot, relativeDocumentPath);
+
+    // Prevent path traversal outside backend root
+    if (!filePath.startsWith(backendRoot + path.sep) && filePath !== backendRoot) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid invoice path'
+      });
+    }
 
     // Check if file exists
     if (!fs.existsSync(filePath)) {
@@ -716,6 +731,16 @@ exports.getMemberInvoice = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename=invoice-${member.company_name_eng?.replace(/[^a-zA-Z0-9]/g, '_') || 'member'}-${transactionId}.pdf`);
     
     const fileStream = fs.createReadStream(filePath);
+    fileStream.on('error', (err) => {
+      console.error('Error reading invoice file:', err);
+      if (!res.headersSent) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to read invoice file'
+        });
+      }
+      res.end();
+    });
     fileStream.pipe(res);
   } catch (error) {
     console.error('Error fetching invoice:', error);
