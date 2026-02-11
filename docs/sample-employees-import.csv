@@ -1,0 +1,3 @@
+firstName,lastName,email,jobTitle,status,departmentId,roleId,joiningDate,employeeName,jobType
+Ali,Khan,ali.khan@example.com,Software Engineer,Active,3,2,1/15/2024,Ali Khan,Full-Time
+Sara,Ahmed,sara.ahmed@example.com,HR Manager,Active,2,2,10/1/2023,Sara Ahmed,Full-Time

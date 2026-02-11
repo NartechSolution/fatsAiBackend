@@ -271,7 +271,32 @@ exports.importNewAssetsFromExcel = async (req, res) => {
       return value;
     };
 
+    // Preload valid foreign key IDs to avoid FK constraint errors
+    const [
+      assetCategories,
+      departments,
+      employees,
+      assetConditions,
+      cities,
+      users,
+    ] = await Promise.all([
+      prisma.assetCategory.findMany({ select: { id: true } }),
+      prisma.department.findMany({ select: { id: true } }),
+      prisma.employeeList.findMany({ select: { id: true } }),
+      prisma.assetCondition.findMany({ select: { id: true } }),
+      prisma.city.findMany({ select: { id: true } }),
+      prisma.user.findMany({ select: { id: true } }),
+    ]);
+
+    const validAssetCategoryIds = new Set(assetCategories.map((a) => a.id));
+    const validDepartmentIds = new Set(departments.map((d) => d.id));
+    const validEmployeeIds = new Set(employees.map((e) => e.id));
+    const validAssetConditionIds = new Set(assetConditions.map((c) => c.id));
+    const validLocationIds = new Set(cities.map((c) => c.id));
+    const validUserIds = new Set(users.map((u) => u.id));
+
     const assetsToCreate = [];
+    const rowErrors = [];
 
     worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
       if (rowNumber === 1) return; // skip header
@@ -330,7 +355,73 @@ exports.importNewAssetsFromExcel = async (req, res) => {
         !assetConditionId ||
         !locationId
       ) {
-        // Skip invalid/incomplete row
+        rowErrors.push({
+          rowNumber,
+          reason:
+            'Missing required fields (name, assetCategoryId, serialNo, departmentId, employeeId, status, assetConditionId, locationId)',
+        });
+        return;
+      }
+
+      // Validate foreign keys
+      let rowInvalid = false;
+      if (!validAssetCategoryIds.has(assetCategoryId)) {
+        rowInvalid = true;
+        rowErrors.push({
+          rowNumber,
+          field: 'assetCategoryId',
+          value: assetCategoryId,
+          reason: `AssetCategory with id ${assetCategoryId} not found`,
+        });
+      }
+      if (!validDepartmentIds.has(departmentId)) {
+        rowInvalid = true;
+        rowErrors.push({
+          rowNumber,
+          field: 'departmentId',
+          value: departmentId,
+          reason: `Department with id ${departmentId} not found`,
+        });
+      }
+      if (!validEmployeeIds.has(employeeId)) {
+        rowInvalid = true;
+        rowErrors.push({
+          rowNumber,
+          field: 'employeeId',
+          value: employeeId,
+          reason: `Employee with id ${employeeId} not found`,
+        });
+      }
+      if (!validAssetConditionIds.has(assetConditionId)) {
+        rowInvalid = true;
+        rowErrors.push({
+          rowNumber,
+          field: 'assetConditionId',
+          value: assetConditionId,
+          reason: `AssetCondition with id ${assetConditionId} not found`,
+        });
+      }
+      if (!validLocationIds.has(locationId)) {
+        rowInvalid = true;
+        rowErrors.push({
+          rowNumber,
+          field: 'locationId',
+          value: locationId,
+          reason: `City (location) with id ${locationId} not found`,
+        });
+      }
+      if (rowUserId && !validUserIds.has(rowUserId)) {
+        rowInvalid = true;
+        rowErrors.push({
+          rowNumber,
+          field: 'userId',
+          value: rowUserId,
+          reason: `User with id ${rowUserId} not found`,
+        });
+      }
+
+      if (rowInvalid) {
+        // Skip this row due to invalid foreign keys
         return;
       }
 
@@ -355,7 +446,8 @@ exports.importNewAssetsFromExcel = async (req, res) => {
       return res.status(400).json({
         success: false,
         message:
-          'No valid asset rows found in Excel file. Please ensure required columns are filled.',
+          'No valid asset rows found in Excel file. Please ensure required columns are filled and foreign keys are valid.',
+        rowErrors,
       });
     }
 
@@ -369,6 +461,8 @@ exports.importNewAssetsFromExcel = async (req, res) => {
       summary: {
         rowsProcessed: assetsToCreate.length,
         rowsInserted: result.count,
+        rowsSkipped: rowErrors.length,
+        rowErrors,
       },
     });
   } catch (error) {
