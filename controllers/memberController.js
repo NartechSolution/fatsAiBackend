@@ -21,6 +21,10 @@ exports.getMembers = async (req, res) => {
       sortOrder = 'desc'
     } = req.query;
 
+    // Normalize status to lowercase so "Inactive", "INACTIVE" etc. all work
+    const normalizedStatus =
+      typeof status === 'string' ? status.toLowerCase() : '';
+
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
@@ -42,8 +46,8 @@ exports.getMembers = async (req, res) => {
 
     // Status filter - filter by subscription status
     let subscriptionWhere = {};
-    if (status) {
-      subscriptionWhere.status = status;
+    if (normalizedStatus && ['active', 'pending', 'inactive'].includes(normalizedStatus)) {
+      subscriptionWhere.status = normalizedStatus;
     }
 
     // Plan filter
@@ -51,14 +55,38 @@ exports.getMembers = async (req, res) => {
       subscriptionWhere.planId = planId;
     }
 
+    // Build user-level where with subscription filters
+    let userWhere = { ...where };
+
+    const hasSubscriptionFilter = Object.keys(subscriptionWhere).length > 0;
+
+    if (normalizedStatus === 'inactive' && !planId) {
+      // Inactive members are:
+      // - users with at least one inactive subscription
+      // - OR users with no subscriptions at all
+      userWhere = {
+        ...where,
+        OR: [
+          { user_subscriptions: { some: { status: 'inactive' } } },
+          { user_subscriptions: { none: {} } }
+        ]
+      };
+    } else if (hasSubscriptionFilter) {
+      // For active/pending or when filtering by plan, require matching subscription
+      userWhere = {
+        ...where,
+        user_subscriptions: { some: subscriptionWhere }
+      };
+    }
+
     // Get total count
     const totalMembers = await prisma.user.count({
-      where
+      where: userWhere
     });
 
     // Get members with subscriptions and invoices
     const members = await prisma.user.findMany({
-      where,
+      where: userWhere,
       skip,
       take: limitNum,
       include: {
@@ -533,6 +561,10 @@ exports.exportMembers = async (req, res) => {
   try {
     const { search = '', status = '', planId = '' } = req.query;
 
+    // Normalize status to lowercase so "Inactive", "INACTIVE" etc. all work
+    const normalizedStatus =
+      typeof status === 'string' ? status.toLowerCase() : '';
+
     // Build where clause (same as getMembers)
     const where = {};
 
@@ -548,16 +580,34 @@ exports.exportMembers = async (req, res) => {
     }
 
     let subscriptionWhere = {};
-    if (status) {
-      subscriptionWhere.status = status;
+    if (normalizedStatus && ['active', 'pending', 'inactive'].includes(normalizedStatus)) {
+      subscriptionWhere.status = normalizedStatus;
     }
     if (planId) {
       subscriptionWhere.planId = planId;
     }
 
+    let userWhere = { ...where };
+    const hasSubscriptionFilter = Object.keys(subscriptionWhere).length > 0;
+
+    if (normalizedStatus === 'inactive' && !planId) {
+      userWhere = {
+        ...where,
+        OR: [
+          { user_subscriptions: { some: { status: 'inactive' } } },
+          { user_subscriptions: { none: {} } }
+        ]
+      };
+    } else if (hasSubscriptionFilter) {
+      userWhere = {
+        ...where,
+        user_subscriptions: { some: subscriptionWhere }
+      };
+    }
+
     // Get all members matching criteria
     const members = await prisma.user.findMany({
-      where,
+      where: userWhere,
       include: {
         user_subscriptions: {
           where: subscriptionWhere,
