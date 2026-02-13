@@ -108,6 +108,70 @@ exports.getAllAssetTags = async (req, res) => {
 };
 
 /**
+ * Get asset tags by newassetId
+ * GET /api/asset-tags/newasset/:newassetId
+ */
+exports.getAssetTagsByNewAssetId = async (req, res) => {
+  try {
+    const { newassetId } = req.params;
+
+    // Validate newassetId
+    const assetId = parseInt(newassetId);
+    if (isNaN(assetId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid newassetId'
+      });
+    }
+
+    // Check if NewAsset exists
+    const newAsset = await prisma.newAsset.findUnique({
+      where: { id: assetId }
+    });
+
+    if (!newAsset) {
+      return res.status(404).json({
+        success: false,
+        message: 'NewAsset not found'
+      });
+    }
+
+    // Get all asset tags for this newassetId
+    const assetTags = await prisma.assetTag.findMany({
+      where: {
+        newassetId: assetId
+      },
+      include: {
+        newAsset: {
+          select: {
+            id: true,
+            name: true,
+            serialNo: true,
+            status: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      count: assetTags.length,
+      data: assetTags
+    });
+  } catch (error) {
+    console.error('Error fetching asset tags by newassetId:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch asset tags',
+      error: error.message
+    });
+  }
+};
+
+/**
  * Get asset tag by ID
  * GET /api/asset-tags/:id
  */

@@ -9,6 +9,9 @@ router.post('/', verifyToken, assetTagController.createAssetTag);
 // GET - Get all asset tags (with optional filter by newassetId)
 router.get('/', assetTagController.getAllAssetTags);
 
+// GET - Get asset tags by newassetId (must be before /:id route)
+router.get('/newasset/:newassetId', assetTagController.getAssetTagsByNewAssetId);
+
 // GET - Get asset tag by ID
 router.get('/:id', assetTagController.getAssetTagById);
 
