@@ -90,6 +90,7 @@ const dataManagementRoutes = require('./routes/dataManagementRoutes');
 const languageLocalizationRoutes = require('./routes/languageLocalizationRoutes');
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const systemHealthRoutes = require('./routes/systemHealthRoutes');
+const assetTagRoutes = require('./routes/assetTagRoutes');
 
 
 // Import backup service
@@ -236,6 +237,7 @@ async function startServer() {
     app.use('/api/language-localization', languageLocalizationRoutes);
     app.use('/api/audit-logs', auditLogRoutes);
     app.use('/api/system-health', systemHealthRoutes);
+    app.use('/api/asset-tags', assetTagRoutes);
     // Error handling middleware (must be after all routes)
     app.use((err, req, res, next) => {
       const status = err.status || 500;

@@ -1085,6 +1085,21 @@ model NewAsset {
   // Relations
   logMaintenances  LogMaintenance[]
   customEvents     CustomEvent[]
+  assetTags        AssetTag[]
+}
+
+// AssetTag model
+model AssetTag {
+  id          Int      @id @default(autoincrement())
+  newassetId  Int      @map("newasset_id")
+  serial      String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  newAsset    NewAsset @relation(fields: [newassetId], references: [id], onDelete: Cascade)
+
+  @@map("asset_tags")
 }
 
 model LogMaintenance {
