@@ -1100,6 +1100,16 @@ model NewAsset {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
+  // Optional further parameters (no relations)
+  brandModel       String?         @db.NVarChar(200)
+  quantity         Int?
+  zoneArea         String?         @db.NVarChar(200)
+  DeptCode         String?         @db.NVarChar(100)
+  bussinessUnit    String?         @db.NVarChar(200)
+  buildingName     String?         @db.NVarChar(200)
+  buildingAddress  String?         @db.NVarChar(Max)
+  buidlingNumber   String?         @db.NVarChar(50)
+
   // Relations - Category, Department, Employee, Condition
   assetCategoryId  Int
   assetCategory    AssetCategory   @relation(fields: [assetCategoryId], references: [id])

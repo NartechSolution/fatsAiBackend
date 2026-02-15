@@ -41,7 +41,16 @@ exports.createNewAsset = async (req, res) => {
       stateId,
       assetBrandId,
       description,
-      userId, // Optional: can be passed in body, or auto-set for members
+      userId,
+      // Optional further parameters (no relations)
+      brandModel,
+      quantity,
+      zoneArea,
+      DeptCode,
+      bussinessUnit,
+      buildingName,
+      buildingAddress,
+      buidlingNumber,
     } = req.body;
 
     // Validate required fields
@@ -180,6 +189,14 @@ exports.createNewAsset = async (req, res) => {
         ...(countryId != null && countryId !== '' ? { countryId: parseInt(countryId, 10) } : {}),
         ...(stateId != null && stateId !== '' ? { stateId: parseInt(stateId, 10) } : {}),
         ...(assetBrandId != null && assetBrandId !== '' ? { assetBrandId: parseInt(assetBrandId, 10) } : {}),
+        ...(brandModel !== undefined ? { brandModel: brandModel || null } : {}),
+        ...(quantity !== undefined ? { quantity: quantity === '' || quantity == null ? null : parseInt(quantity, 10) } : {}),
+        ...(zoneArea !== undefined ? { zoneArea: zoneArea || null } : {}),
+        ...(DeptCode !== undefined ? { DeptCode: DeptCode || null } : {}),
+        ...(bussinessUnit !== undefined ? { bussinessUnit: bussinessUnit || null } : {}),
+        ...(buildingName !== undefined ? { buildingName: buildingName || null } : {}),
+        ...(buildingAddress !== undefined ? { buildingAddress: buildingAddress || null } : {}),
+        ...(buidlingNumber !== undefined ? { buidlingNumber: buidlingNumber || null } : {}),
       },
     });
 
@@ -385,6 +402,14 @@ exports.importNewAssetsFromExcel = async (req, res) => {
       const stateId = parseIntSafe(getCellValue(row, 'stateid'));
       const assetBrandId = parseIntSafe(getCellValue(row, 'assetbrandid'));
       const description = getCellValue(row, 'description');
+      const brandModel = getCellValue(row, 'brandmodel');
+      const quantity = parseIntSafe(getCellValue(row, 'quantity'));
+      const zoneArea = getCellValue(row, 'zonearea');
+      const DeptCode = getCellValue(row, 'deptcode');
+      const bussinessUnit = getCellValue(row, 'bussinessunit');
+      const buildingName = getCellValue(row, 'buildingname');
+      const buildingAddress = getCellValue(row, 'buildingaddress');
+      const buidlingNumber = getCellValue(row, 'buidlingnumber');
       const purchaseDate = parseDateCell(
         getCellValue(row, 'purchasedate')
       );
@@ -528,6 +553,14 @@ exports.importNewAssetsFromExcel = async (req, res) => {
         ...(countryId !== null ? { countryId } : {}),
         ...(stateId !== null ? { stateId } : {}),
         ...(assetBrandId !== null ? { assetBrandId } : {}),
+        ...(brandModel !== undefined && brandModel !== null && brandModel !== '' ? { brandModel: String(brandModel) } : {}),
+        ...(quantity !== null ? { quantity } : {}),
+        ...(zoneArea !== undefined && zoneArea !== null && zoneArea !== '' ? { zoneArea: String(zoneArea) } : {}),
+        ...(DeptCode !== undefined && DeptCode !== null && DeptCode !== '' ? { DeptCode: String(DeptCode) } : {}),
+        ...(bussinessUnit !== undefined && bussinessUnit !== null && bussinessUnit !== '' ? { bussinessUnit: String(bussinessUnit) } : {}),
+        ...(buildingName !== undefined && buildingName !== null && buildingName !== '' ? { buildingName: String(buildingName) } : {}),
+        ...(buildingAddress !== undefined && buildingAddress !== null && buildingAddress !== '' ? { buildingAddress: String(buildingAddress) } : {}),
+        ...(buidlingNumber !== undefined && buidlingNumber !== null && buidlingNumber !== '' ? { buidlingNumber: String(buidlingNumber) } : {}),
       });
     });
 
@@ -673,7 +706,15 @@ exports.updateNewAsset = async (req, res) => {
       stateId,
       assetBrandId,
       description,
-      userId, // Optional: can update userId
+      userId,
+      brandModel,
+      quantity,
+      zoneArea,
+      DeptCode,
+      bussinessUnit,
+      buildingName,
+      buildingAddress,
+      buidlingNumber,
     } = req.body;
 
     const existing = await prisma.newAsset.findUnique({
@@ -829,6 +870,14 @@ exports.updateNewAsset = async (req, res) => {
         ...(assetBrandId !== undefined
           ? { assetBrandId: assetBrandId == null || assetBrandId === '' ? null : parseInt(assetBrandId, 10) }
           : {}),
+        ...(brandModel !== undefined ? { brandModel: brandModel || null } : {}),
+        ...(quantity !== undefined ? { quantity: quantity === '' || quantity == null ? null : parseInt(quantity, 10) } : {}),
+        ...(zoneArea !== undefined ? { zoneArea: zoneArea || null } : {}),
+        ...(DeptCode !== undefined ? { DeptCode: DeptCode || null } : {}),
+        ...(bussinessUnit !== undefined ? { bussinessUnit: bussinessUnit || null } : {}),
+        ...(buildingName !== undefined ? { buildingName: buildingName || null } : {}),
+        ...(buildingAddress !== undefined ? { buildingAddress: buildingAddress || null } : {}),
+        ...(buidlingNumber !== undefined ? { buidlingNumber: buidlingNumber || null } : {}),
       },
       include: newAssetInclude,
     });
