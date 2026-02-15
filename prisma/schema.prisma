@@ -507,17 +507,49 @@ model Department {
   updatedAt       DateTime  @updatedAt
 }
 
+// Country model
+model Country {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.NVarChar(200)
+  code      String   @db.VarChar(10)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  states State[]
+
+  @@map("countries")
+}
+
+// State model
+model State {
+  id        Int      @id @default(autoincrement())
+  countryId Int
+  name      String   @db.NVarChar(200)
+  code      String   @db.VarChar(20)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  country Country @relation(fields: [countryId], references: [id])
+  cities  City[]
+
+  @@map("states")
+}
+
 // City model
 model City {
   id          Int        @id @default(autoincrement())
   name        String
-  country     String
+  country     String     // Legacy field, kept for backward compatibility
   latitude    Float
   longitude   Float
   status      String
   description String?
 
   // Relations
+  stateId     Int?
+  state       State?     @relation(fields: [stateId], references: [id])
   departments Department[]
   newAssets   NewAsset[]   // One-to-many: one City has many NewAssets
 

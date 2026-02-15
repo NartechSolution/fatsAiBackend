@@ -65,6 +65,8 @@ const accessLevelRoutes = require('./routes/accessLevelRoutes');
 const permissionRoutes = require('./routes/permissionRoutes');
 const permissionCategoryRoutes = require('./routes/permissionCategoryRoutes');
 const cityRoutes = require('./routes/cityRoutes');
+const countryRoutes = require('./routes/countryRoutes');
+const stateRoutes = require('./routes/stateRoutes');
 const prismaRoutes = require('./routes/prismaRoutes');
 const assetBrandRoutes = require('./routes/assetBrandRoutes');
 const assetCategoryRoutes = require('./routes/assetCategoryRoutes');
@@ -212,6 +214,8 @@ async function startServer() {
     app.use('/api/permissions', permissionRoutes);
     app.use('/api/permission-categories', permissionCategoryRoutes);
     app.use('/api/cities', cityRoutes);
+    app.use('/api/countries', countryRoutes);
+    app.use('/api/states', stateRoutes);
     app.use('/api/prisma', prismaRoutes);
     app.use('/api/asset-brands', assetBrandRoutes);
     app.use('/api/asset-categories', assetCategoryRoutes);

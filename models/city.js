@@ -1,13 +1,14 @@
 const prisma = require('../prisma/client');
 
 class City {
-  // Create a new city with related departments
+  // Create a new city with related departments and optional state
   static async create(data) {
-    const { departmentIds = [], ...cityData } = data;
+    const { departmentIds = [], stateId, ...cityData } = data;
 
     return prisma.city.create({
       data: {
         ...cityData,
+        ...(stateId != null ? { stateId: Number(stateId) } : {}),
         departments: departmentIds.length
           ? {
               connect: departmentIds.map((id) => ({ id: Number(id) })),
@@ -16,16 +17,18 @@ class City {
       },
       include: {
         departments: true,
+        state: { include: { country: true } },
       },
     });
   }
 
-  // Get all cities with their departments
+  // Get all cities with their departments and state
   static async findAll() {
     return prisma.city.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
         departments: true,
+        state: { include: { country: true } },
       },
     });
   }
@@ -36,18 +39,20 @@ class City {
       where: { id: Number(id) },
       include: {
         departments: true,
+        state: { include: { country: true } },
       },
     });
   }
 
-  // Update city and its departments
+  // Update city and its departments and optional state
   static async update(id, data) {
-    const { departmentIds, ...cityData } = data;
+    const { departmentIds, stateId, ...cityData } = data;
 
     return prisma.city.update({
       where: { id: Number(id) },
       data: {
         ...cityData,
+        ...(stateId !== undefined ? { stateId: stateId == null ? null : Number(stateId) } : {}),
         ...(Array.isArray(departmentIds)
           ? {
               departments: {
@@ -58,6 +63,7 @@ class City {
       },
       include: {
         departments: true,
+        state: { include: { country: true } },
       },
     });
   }

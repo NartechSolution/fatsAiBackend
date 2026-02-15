@@ -12,6 +12,7 @@ exports.createCity = async (req, res) => {
       status,
       description,
       departmentIds,
+      stateId,
     } = req.body;
 
     // Basic validation
@@ -44,6 +45,18 @@ exports.createCity = async (req, res) => {
       validDepartmentIds = numericIds;
     }
 
+    if (stateId != null) {
+      const state = await prisma.state.findUnique({
+        where: { id: Number(stateId) },
+      });
+      if (!state) {
+        return res.status(400).json({
+          success: false,
+          message: `State with ID ${stateId} does not exist`,
+        });
+      }
+    }
+
     const city = await City.create({
       name,
       country,
@@ -52,6 +65,7 @@ exports.createCity = async (req, res) => {
       status,
       description: description || null,
       departmentIds: validDepartmentIds,
+      ...(stateId != null ? { stateId: Number(stateId) } : {}),
     });
 
     return res.status(201).json({
@@ -128,6 +142,7 @@ exports.updateCity = async (req, res) => {
       status,
       description,
       departmentIds,
+      stateId,
     } = req.body;
 
     // Check if city exists
@@ -160,6 +175,18 @@ exports.updateCity = async (req, res) => {
       validDepartmentIds = numericIds;
     }
 
+    if (stateId !== undefined && stateId != null) {
+      const state = await prisma.state.findUnique({
+        where: { id: Number(stateId) },
+      });
+      if (!state) {
+        return res.status(400).json({
+          success: false,
+          message: `State with ID ${stateId} does not exist`,
+        });
+      }
+    }
+
     const city = await City.update(id, {
       ...(name !== undefined ? { name } : {}),
       ...(country !== undefined ? { country } : {}),
@@ -168,6 +195,7 @@ exports.updateCity = async (req, res) => {
       ...(status !== undefined ? { status } : {}),
       ...(description !== undefined ? { description } : {}),
       ...(validDepartmentIds !== undefined ? { departmentIds: validDepartmentIds } : {}),
+      ...(stateId !== undefined ? { stateId: stateId == null ? null : Number(stateId) } : {}),
     });
 
     return res.status(200).json({
