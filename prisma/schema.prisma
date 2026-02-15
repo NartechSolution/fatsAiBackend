@@ -516,7 +516,8 @@ model Country {
   updatedAt DateTime @updatedAt
 
   // Relations
-  states State[]
+  states    State[]
+  newAssets NewAsset[]
 
   @@map("countries")
 }
@@ -531,8 +532,9 @@ model State {
   updatedAt DateTime @updatedAt
 
   // Relations
-  country Country @relation(fields: [countryId], references: [id])
-  cities  City[]
+  country   Country   @relation(fields: [countryId], references: [id])
+  cities    City[]
+  newAssets NewAsset[]
 
   @@map("states")
 }
@@ -1064,6 +1066,9 @@ model AssetBrand {
   description         String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+
+  // Relations
+  newAssets NewAsset[]
 }
 
 // AssetCategory model
@@ -1095,9 +1100,12 @@ model NewAsset {
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
-  // Relations
+  // Relations - Category, Department, Employee, Condition
   assetCategoryId  Int
   assetCategory    AssetCategory   @relation(fields: [assetCategoryId], references: [id])
+
+  assetBrandId     Int?
+  assetBrand       AssetBrand?     @relation(fields: [assetBrandId], references: [id], onUpdate: NoAction, onDelete: NoAction)
 
   departmentId     Int
   department       Department      @relation(fields: [departmentId], references: [id], onUpdate: NoAction, onDelete: NoAction)
@@ -1108,8 +1116,15 @@ model NewAsset {
   assetConditionId Int
   assetCondition   AssetCondition  @relation(fields: [assetConditionId], references: [id])
 
+  // Relations - Location (Country, State, City) - NoAction to avoid cyclic cascade
+  countryId        Int?
+  country          Country?        @relation(fields: [countryId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+
+  stateId          Int?
+  state            State?          @relation(fields: [stateId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+
   locationId       Int
-  location         City            @relation(fields: [locationId], references: [id])
+  location         City            @relation(fields: [locationId], references: [id], onUpdate: NoAction, onDelete: NoAction)
 
   userId           String?        // Optional: link to User model for member assets
   user             User?           @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)

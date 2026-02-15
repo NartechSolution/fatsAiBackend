@@ -4,6 +4,19 @@ const ExcelJS = require('exceljs');
 const fs = require('fs');
 const path = require('path');
 
+// Shared include for NewAsset relations (Country, State, City, AssetCategory, AssetBrand, etc.)
+const newAssetInclude = {
+  assetCategory: true,
+  assetBrand: true,
+  department: true,
+  employee: true,
+  assetCondition: true,
+  country: true,
+  state: true,
+  location: true, // City
+  user: true,
+};
+
 // Middleware for handling file uploads (image field)
 exports.uploadNewAssetImage = upload.single('image');
 
@@ -24,6 +37,9 @@ exports.createNewAsset = async (req, res) => {
       purchaseDate,
       warrantyExpiry,
       locationId,
+      countryId,
+      stateId,
+      assetBrandId,
       description,
       userId, // Optional: can be passed in body, or auto-set for members
     } = req.body;
@@ -96,6 +112,41 @@ exports.createNewAsset = async (req, res) => {
         });
     }
 
+    // Optional: validate countryId, stateId, assetBrandId if provided
+    if (countryId != null && countryId !== '') {
+      const country = await prisma.country.findUnique({
+        where: { id: parseInt(countryId, 10) },
+      });
+      if (!country) {
+        return res.status(400).json({
+          success: false,
+          message: `Country with id ${countryId} not found`,
+        });
+      }
+    }
+    if (stateId != null && stateId !== '') {
+      const state = await prisma.state.findUnique({
+        where: { id: parseInt(stateId, 10) },
+      });
+      if (!state) {
+        return res.status(400).json({
+          success: false,
+          message: `State with id ${stateId} not found`,
+        });
+      }
+    }
+    if (assetBrandId != null && assetBrandId !== '') {
+      const assetBrand = await prisma.assetBrand.findUnique({
+        where: { id: parseInt(assetBrandId, 10) },
+      });
+      if (!assetBrand) {
+        return res.status(400).json({
+          success: false,
+          message: `AssetBrand with id ${assetBrandId} not found`,
+        });
+      }
+    }
+
     // Image
     const imagePath = req.file ? getImageUrl(req.file.filename) : null;
 
@@ -126,20 +177,16 @@ exports.createNewAsset = async (req, res) => {
         assetConditionId: parseInt(assetConditionId, 10),
         locationId: parseInt(locationId, 10),
         userId: finalUserId, // Set userId for member assets
+        ...(countryId != null && countryId !== '' ? { countryId: parseInt(countryId, 10) } : {}),
+        ...(stateId != null && stateId !== '' ? { stateId: parseInt(stateId, 10) } : {}),
+        ...(assetBrandId != null && assetBrandId !== '' ? { assetBrandId: parseInt(assetBrandId, 10) } : {}),
       },
     });
 
-    // Fetch with relations separately to avoid foreign key constraint issues
+    // Fetch with relations
     const newAssetWithRelations = await prisma.newAsset.findUnique({
       where: { id: newAsset.id },
-      include: {
-        assetCategory: true,
-        department: true,
-        employee: true,
-        assetCondition: true,
-        location: true,
-        user: true, // Include user relation
-      },
+      include: newAssetInclude,
     });
 
     res.status(201).json({
@@ -279,6 +326,9 @@ exports.importNewAssetsFromExcel = async (req, res) => {
       assetConditions,
       cities,
       users,
+      countries,
+      states,
+      assetBrands,
     ] = await Promise.all([
       prisma.assetCategory.findMany({ select: { id: true } }),
       prisma.department.findMany({ select: { id: true } }),
@@ -286,6 +336,9 @@ exports.importNewAssetsFromExcel = async (req, res) => {
       prisma.assetCondition.findMany({ select: { id: true } }),
       prisma.city.findMany({ select: { id: true } }),
       prisma.user.findMany({ select: { id: true } }),
+      prisma.country.findMany({ select: { id: true } }),
+      prisma.state.findMany({ select: { id: true } }),
+      prisma.assetBrand.findMany({ select: { id: true } }),
     ]);
 
     const validAssetCategoryIds = new Set(assetCategories.map((a) => a.id));
@@ -294,6 +347,9 @@ exports.importNewAssetsFromExcel = async (req, res) => {
     const validAssetConditionIds = new Set(assetConditions.map((c) => c.id));
     const validLocationIds = new Set(cities.map((c) => c.id));
     const validUserIds = new Set(users.map((u) => u.id));
+    const validCountryIds = new Set(countries.map((c) => c.id));
+    const validStateIds = new Set(states.map((s) => s.id));
+    const validAssetBrandIds = new Set(assetBrands.map((b) => b.id));
 
     const assetsToCreate = [];
     const rowErrors = [];
@@ -325,6 +381,9 @@ exports.importNewAssetsFromExcel = async (req, res) => {
       const locationId = parseIntSafe(
         getCellValue(row, 'locationid')
       );
+      const countryId = parseIntSafe(getCellValue(row, 'countryid'));
+      const stateId = parseIntSafe(getCellValue(row, 'stateid'));
+      const assetBrandId = parseIntSafe(getCellValue(row, 'assetbrandid'));
       const description = getCellValue(row, 'description');
       const purchaseDate = parseDateCell(
         getCellValue(row, 'purchasedate')
@@ -419,6 +478,33 @@ exports.importNewAssetsFromExcel = async (req, res) => {
           reason: `User with id ${rowUserId} not found`,
         });
       }
+      if (countryId !== null && !validCountryIds.has(countryId)) {
+        rowInvalid = true;
+        rowErrors.push({
+          rowNumber,
+          field: 'countryId',
+          value: countryId,
+          reason: `Country with id ${countryId} not found`,
+        });
+      }
+      if (stateId !== null && !validStateIds.has(stateId)) {
+        rowInvalid = true;
+        rowErrors.push({
+          rowNumber,
+          field: 'stateId',
+          value: stateId,
+          reason: `State with id ${stateId} not found`,
+        });
+      }
+      if (assetBrandId !== null && !validAssetBrandIds.has(assetBrandId)) {
+        rowInvalid = true;
+        rowErrors.push({
+          rowNumber,
+          field: 'assetBrandId',
+          value: assetBrandId,
+          reason: `AssetBrand with id ${assetBrandId} not found`,
+        });
+      }
 
       if (rowInvalid) {
         // Skip this row due to invalid foreign keys
@@ -439,6 +525,9 @@ exports.importNewAssetsFromExcel = async (req, res) => {
         assetConditionId,
         locationId,
         userId: rowUserId,
+        ...(countryId !== null ? { countryId } : {}),
+        ...(stateId !== null ? { stateId } : {}),
+        ...(assetBrandId !== null ? { assetBrandId } : {}),
       });
     });
 
@@ -514,14 +603,7 @@ exports.getAllNewAssets = async (req, res) => {
     const newAssets = await prisma.newAsset.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      include: {
-        assetCategory: true,
-        department: true,
-        employee: true,
-        assetCondition: true,
-        location: true,
-        user: true, // Include user relation
-      },
+      include: newAssetInclude,
     });
 
     console.log(`Found ${newAssets.length} assets for ${isAdmin ? 'admin' : 'member'} user`);
@@ -548,14 +630,7 @@ exports.getNewAssetById = async (req, res) => {
 
     const newAsset = await prisma.newAsset.findUnique({
       where: { id: parseInt(id, 10) },
-      include: {
-        assetCategory: true,
-        department: true,
-        employee: true,
-        assetCondition: true,
-        location: true,
-        user: true, // Include user relation
-      },
+      include: newAssetInclude,
     });
 
     if (!newAsset) {
@@ -594,6 +669,9 @@ exports.updateNewAsset = async (req, res) => {
       purchaseDate,
       warrantyExpiry,
       locationId,
+      countryId,
+      stateId,
+      assetBrandId,
       description,
       userId, // Optional: can update userId
     } = req.body;
@@ -666,6 +744,40 @@ exports.updateNewAsset = async (req, res) => {
       }
     }
 
+    if (countryId !== undefined && countryId !== null && countryId !== '') {
+      const country = await prisma.country.findUnique({
+        where: { id: parseInt(countryId, 10) },
+      });
+      if (!country) {
+        return res.status(400).json({
+          success: false,
+          message: `Country with id ${countryId} not found`,
+        });
+      }
+    }
+    if (stateId !== undefined && stateId !== null && stateId !== '') {
+      const state = await prisma.state.findUnique({
+        where: { id: parseInt(stateId, 10) },
+      });
+      if (!state) {
+        return res.status(400).json({
+          success: false,
+          message: `State with id ${stateId} not found`,
+        });
+      }
+    }
+    if (assetBrandId !== undefined && assetBrandId !== null && assetBrandId !== '') {
+      const assetBrand = await prisma.assetBrand.findUnique({
+        where: { id: parseInt(assetBrandId, 10) },
+      });
+      if (!assetBrand) {
+        return res.status(400).json({
+          success: false,
+          message: `AssetBrand with id ${assetBrandId} not found`,
+        });
+      }
+    }
+
     // Image
     const imagePath = req.file
       ? getImageUrl(req.file.filename)
@@ -708,15 +820,17 @@ exports.updateNewAsset = async (req, res) => {
           locationId !== undefined ? parseInt(locationId, 10) : existing.locationId,
         userId:
           userId !== undefined ? userId : existing.userId,
+        ...(countryId !== undefined
+          ? { countryId: countryId == null || countryId === '' ? null : parseInt(countryId, 10) }
+          : {}),
+        ...(stateId !== undefined
+          ? { stateId: stateId == null || stateId === '' ? null : parseInt(stateId, 10) }
+          : {}),
+        ...(assetBrandId !== undefined
+          ? { assetBrandId: assetBrandId == null || assetBrandId === '' ? null : parseInt(assetBrandId, 10) }
+          : {}),
       },
-      include: {
-        assetCategory: true,
-        department: true,
-        employee: true,
-        assetCondition: true,
-        location: true,
-        user: true, // Include user relation
-      },
+      include: newAssetInclude,
     });
 
     res.status(200).json({
