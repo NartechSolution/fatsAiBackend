@@ -9,6 +9,10 @@ router.post('/', verifyToken,  cityController.createCity);
 // Get all cities - any authenticated user (member or admin)
 router.get('/', verifyToken, cityController.getAllCities);
 
+// Get cities by state ID - any authenticated user (member or admin)
+// This route must come before /:id to avoid route conflicts
+router.get('/state/:stateId', verifyToken, cityController.getCitiesByStateId);
+
 // Get city by ID - any authenticated user (member or admin)
 router.get('/:id', verifyToken, cityController.getCityById);
 

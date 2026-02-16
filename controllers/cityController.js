@@ -102,6 +102,26 @@ exports.getAllCities = async (req, res) => {
   }
 };
 
+// Get cities by state ID
+exports.getCitiesByStateId = async (req, res) => {
+  try {
+    const { stateId } = req.params;
+    const cities = await City.findByStateId(stateId);
+    return res.status(200).json({
+      success: true,
+      message: 'Cities retrieved successfully',
+      data: cities,
+    });
+  } catch (error) {
+    console.error('Error retrieving cities by state:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve cities',
+      error: error.message,
+    });
+  }
+};
+
 // Get city by ID
 exports.getCityById = async (req, res) => {
   try {

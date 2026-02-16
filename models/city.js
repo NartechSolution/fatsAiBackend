@@ -33,6 +33,18 @@ class City {
     });
   }
 
+  // Get cities by state ID
+  static async findByStateId(stateId) {
+    return prisma.city.findMany({
+      where: { stateId: Number(stateId) },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        departments: true,
+        state: { include: { country: true } },
+      },
+    });
+  }
+
   // Get city by ID
   static async findById(id) {
     return prisma.city.findUnique({

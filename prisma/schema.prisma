@@ -554,9 +554,37 @@ model City {
   state       State?     @relation(fields: [stateId], references: [id])
   departments Department[]
   newAssets   NewAsset[]   // One-to-many: one City has many NewAssets
+  buildings   Building[]   // One-to-many: one City has many Buildings
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// Building model
+model Building {
+  id          Int        @id @default(autoincrement())
+  name        String
+  address     String?
+  number      String?    @db.NVarChar(50)
+  cityId      Int?
+  city        City?      @relation(fields: [cityId], references: [id], onDelete: SetNull)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  floors      Floor[]
+  newAssets   NewAsset[]
+}
+
+// Floor model
+model Floor {
+  id            Int        @id @default(autoincrement())
+  nameOrNumber  String
+  buildingId    Int?
+  building      Building?  @relation(fields: [buildingId], references: [id], onDelete: SetNull)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  
+  newAssets     NewAsset[]
 }
 
 // NPK Sensor data model
@@ -1135,6 +1163,12 @@ model NewAsset {
 
   locationId       Int
   location         City            @relation(fields: [locationId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+
+  buildingId      Int?
+  building        Building?        @relation(fields: [buildingId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+
+  floorId         Int?
+  floor            Floor?          @relation(fields: [floorId], references: [id], onUpdate: NoAction, onDelete: NoAction)
 
   userId           String?        // Optional: link to User model for member assets
   user             User?           @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
