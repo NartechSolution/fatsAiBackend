@@ -14,6 +14,8 @@ const newAssetInclude = {
   country: true,
   state: true,
   location: true, // City
+  building: true,
+  floor: true,
   user: true,
 };
 
@@ -40,6 +42,8 @@ exports.createNewAsset = async (req, res) => {
       countryId,
       stateId,
       assetBrandId,
+      buildingId,
+      floorId,
       description,
       userId,
       // Optional further parameters (no relations)
@@ -148,6 +152,30 @@ exports.createNewAsset = async (req, res) => {
       }
     }
 
+    if (buildingId != null && buildingId !== '') {
+      const building = await prisma.building.findUnique({
+        where: { id: parseInt(buildingId, 10) },
+      });
+      if (!building) {
+        return res.status(400).json({
+          success: false,
+          message: `Building with id ${buildingId} not found`,
+        });
+      }
+    }
+
+    if (floorId != null && floorId !== '') {
+      const floor = await prisma.floor.findUnique({
+        where: { id: parseInt(floorId, 10) },
+      });
+      if (!floor) {
+        return res.status(400).json({
+          success: false,
+          message: `Floor with id ${floorId} not found`,
+        });
+      }
+    }
+
     // Image
     const imagePath = req.file ? getImageUrl(req.file.filename) : null;
 
@@ -181,6 +209,8 @@ exports.createNewAsset = async (req, res) => {
         ...(countryId != null && countryId !== '' ? { countryId: parseInt(countryId, 10) } : {}),
         ...(stateId != null && stateId !== '' ? { stateId: parseInt(stateId, 10) } : {}),
         ...(assetBrandId != null && assetBrandId !== '' ? { assetBrandId: parseInt(assetBrandId, 10) } : {}),
+        ...(buildingId != null && buildingId !== '' ? { buildingId: parseInt(buildingId, 10) } : {}),
+        ...(floorId != null && floorId !== '' ? { floorId: parseInt(floorId, 10) } : {}),
         ...(brandModel !== undefined ? { brandModel: brandModel || null } : {}),
         ...(quantity !== undefined ? { quantity: quantity === '' || quantity == null ? null : parseInt(quantity, 10) } : {}),
         ...(zoneArea !== undefined ? { zoneArea: zoneArea || null } : {}),
@@ -655,6 +685,8 @@ exports.updateNewAsset = async (req, res) => {
       countryId,
       stateId,
       assetBrandId,
+      buildingId,
+      floorId,
       description,
       userId,
       brandModel,
@@ -769,6 +801,30 @@ exports.updateNewAsset = async (req, res) => {
       }
     }
 
+    if (buildingId !== undefined && buildingId !== null && buildingId !== '') {
+      const building = await prisma.building.findUnique({
+        where: { id: parseInt(buildingId, 10) },
+      });
+      if (!building) {
+        return res.status(400).json({
+          success: false,
+          message: `Building with id ${buildingId} not found`,
+        });
+      }
+    }
+
+    if (floorId !== undefined && floorId !== null && floorId !== '') {
+      const floor = await prisma.floor.findUnique({
+        where: { id: parseInt(floorId, 10) },
+      });
+      if (!floor) {
+        return res.status(400).json({
+          success: false,
+          message: `Floor with id ${floorId} not found`,
+        });
+      }
+    }
+
     // Image
     const imagePath = req.file
       ? getImageUrl(req.file.filename)
@@ -819,6 +875,12 @@ exports.updateNewAsset = async (req, res) => {
           : {}),
         ...(assetBrandId !== undefined
           ? { assetBrandId: assetBrandId == null || assetBrandId === '' ? null : parseInt(assetBrandId, 10) }
+          : {}),
+        ...(buildingId !== undefined
+          ? { buildingId: buildingId == null || buildingId === '' ? null : parseInt(buildingId, 10) }
+          : {}),
+        ...(floorId !== undefined
+          ? { floorId: floorId == null || floorId === '' ? null : parseInt(floorId, 10) }
           : {}),
         ...(brandModel !== undefined ? { brandModel: brandModel || null } : {}),
         ...(quantity !== undefined ? { quantity: quantity === '' || quantity == null ? null : parseInt(quantity, 10) } : {}),
