@@ -117,6 +117,7 @@ async function disconnectPrisma() {
 }
 
 // Helper to run shell commands sequentially with SSE streaming
+// Uses single command string when shell:true to avoid DEP0190 (args not escaped)
 async function runCommandWithStreaming(res, options) {
   const {
     step,
@@ -139,8 +140,12 @@ async function runCommandWithStreaming(res, options) {
     );
   }
 
+  // Build full command string for shell to avoid Node DEP0190 (args with shell:true not escaped)
+  const fullCommand =
+    args.length > 0 ? [command, ...args].map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ') : command;
+
   return new Promise((resolve, reject) => {
-    const childProcess = spawn(command, args, {
+    const childProcess = spawn(fullCommand, [], {
       cwd,
       shell: true,
       stdio: ['inherit', 'pipe', 'pipe'],
@@ -328,28 +333,25 @@ exports.generatePrisma = async (req, res) => {
 };
 
 // Full deployment flow on /api/prisma/git-pull:
-// 1) pm2 stop iot
-// 2) git pull origin main
-// 3) npm install
-// 4) npx prisma generate
-// 5) pm2 start iot
+// Run git pull, npm install, prisma generate WHILE SERVER IS RUNNING, then pm2 restart at the end.
+// We do NOT run "pm2 stop" first — that would kill this process and the rest would never run.
+// 1) git pull origin main
+// 2) npm install
+// 3) npx prisma generate
+// 4) pm2 restart iot (restart loads new code; this process will exit but PM2 brings it back)
 exports.gitPull = async (req, res) => {
   try {
-    // Get the project root directory
     const projectRoot = path.join(__dirname, '..');
-    
-    // Set headers for Server-Sent Events (SSE) streaming
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    
-    // Send initial message
+
     res.write(
       `data: ${JSON.stringify({
         type: 'start',
-        message:
-          'Starting deployment: stop pm2 -> git pull -> npm install -> prisma generate -> start pm2',
+        message: 'Starting deployment: git pull -> npm install -> prisma generate -> pm2 restart',
       })}\n\n`
     );
 
@@ -358,29 +360,7 @@ exports.gitPull = async (req, res) => {
     const npmCommand = isWin ? 'npm.cmd' : 'npm';
     const npxCommand = isWin ? 'npx.cmd' : 'npx';
 
-    // 1) Stop PM2 process (this will stop the current server, so we need to handle it carefully)
-    try {
-      await runCommandWithStreaming(res, {
-        step: 'stop-pm2',
-        command: pm2Command,
-        args: ['stop', 'iot'],
-        cwd: projectRoot,
-        startMessage: 'Stopping PM2 process "iot"...',
-        successMessage: 'PM2 process "iot" stopped successfully.',
-        errorMessage: 'Failed to stop PM2 process "iot".',
-      });
-    } catch (error) {
-      // If stop fails (maybe already stopped), continue anyway
-      res.write(
-        `data: ${JSON.stringify({
-          type: 'warning',
-          step: 'stop-pm2',
-          message: 'PM2 stop failed or process already stopped. Continuing...',
-        })}\n\n`
-      );
-    }
-
-    // 2) Git pull
+    // 1) Git pull
     await runCommandWithStreaming(res, {
       step: 'git-pull',
       command: 'git',
@@ -391,7 +371,7 @@ exports.gitPull = async (req, res) => {
       errorMessage: 'Failed to pull from git main branch.',
     });
 
-    // 3) npm install
+    // 2) npm install
     await runCommandWithStreaming(res, {
       step: 'npm-install',
       command: npmCommand,
@@ -402,7 +382,7 @@ exports.gitPull = async (req, res) => {
       errorMessage: 'Failed to run npm install.',
     });
 
-    // 4) npx prisma generate
+    // 3) npx prisma generate
     await runCommandWithStreaming(res, {
       step: 'prisma-generate',
       command: npxCommand,
@@ -413,43 +393,28 @@ exports.gitPull = async (req, res) => {
       errorMessage: 'Failed to generate Prisma client.',
     });
 
-    // 5) Start PM2 process again
-    try {
-      await runCommandWithStreaming(res, {
-        step: 'start-pm2',
-        command: pm2Command,
-        args: ['start', 'iot'],
-        cwd: projectRoot,
-        startMessage: 'Starting PM2 process "iot"...',
-        successMessage: 'PM2 process "iot" started successfully.',
-        errorMessage: 'Failed to start PM2 process "iot".',
-      });
-    } catch (error) {
-      // If start fails, try restart instead
-      res.write(
-        `data: ${JSON.stringify({
-          type: 'info',
-          step: 'start-pm2',
-          message: 'Start failed, trying restart instead...',
-        })}\n\n`
-      );
-      await runCommandWithStreaming(res, {
+    // 4) pm2 restart iot (restart at the end; this process will exit, PM2 brings it back with new code)
+    res.write(
+      `data: ${JSON.stringify({
+        type: 'info',
         step: 'restart-pm2',
-        command: pm2Command,
-        args: ['restart', 'iot'],
-        cwd: projectRoot,
-        startMessage: 'Restarting PM2 process "iot"...',
-        successMessage: 'PM2 process "iot" restarted successfully.',
-        errorMessage: 'Failed to restart PM2 process "iot".',
-      });
-    }
+        message: 'Restarting PM2 "iot" — this process will exit; PM2 will start it again with new code.',
+      })}\n\n`
+    );
+    await runCommandWithStreaming(res, {
+      step: 'restart-pm2',
+      command: pm2Command,
+      args: ['restart', 'iot'],
+      cwd: projectRoot,
+      startMessage: 'Running pm2 restart iot...',
+      successMessage: 'PM2 restart sent. Server will come back with new code.',
+      errorMessage: 'Failed to restart PM2 process "iot".',
+    });
 
-    // All steps done
     res.write(
       `data: ${JSON.stringify({
         type: 'success',
-        message:
-          'Deployment completed successfully: pm2 stop -> git pull -> npm install -> prisma generate -> pm2 start',
+        message: 'Deployment completed: git pull -> npm install -> prisma generate -> pm2 restart',
       })}\n\n`
     );
     res.write(`data: ${JSON.stringify({ type: 'end' })}\n\n`);
