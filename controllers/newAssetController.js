@@ -53,72 +53,64 @@ exports.createNewAsset = async (req, res) => {
       buidlingNumber,
     } = req.body;
 
-    // Validate required fields
-    if (
-      !name ||
-      !assetCategoryId ||
-      !serialNo ||
-      !departmentId ||
-      !employeeId ||
-      !status ||
-      !assetConditionId ||
-      !locationId
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          'Required fields: name, assetCategoryId, serialNo, departmentId, employeeId, status, assetConditionId, locationId',
+    // Check related records only when IDs are provided
+    if (assetCategoryId != null && assetCategoryId !== '') {
+      const assetCategory = await prisma.assetCategory.findUnique({
+        where: { id: parseInt(assetCategoryId, 10) },
       });
+      if (!assetCategory) {
+        return res
+          .status(404)
+          .json({ success: false, message: 'AssetCategory not found' });
+      }
     }
 
-    // Check related records
-    const assetCategory = await prisma.assetCategory.findUnique({
-      where: { id: parseInt(assetCategoryId, 10) },
-    });
-    if (!assetCategory) {
-      return res
-        .status(404)
-        .json({ success: false, message: 'AssetCategory not found' });
+    if (departmentId != null && departmentId !== '') {
+      const department = await prisma.department.findUnique({
+        where: { id: parseInt(departmentId, 10) },
+      });
+      if (!department) {
+        return res
+          .status(404)
+          .json({ success: false, message: 'Department not found' });
+      }
     }
 
-    const department = await prisma.department.findUnique({
-      where: { id: parseInt(departmentId, 10) },
-    });
-    if (!department) {
-      return res
-        .status(404)
-        .json({ success: false, message: 'Department not found' });
+    if (employeeId != null && employeeId !== '') {
+      const employee = await prisma.employeeList.findUnique({
+        where: { id: parseInt(employeeId, 10) },
+      });
+      if (!employee) {
+        return res
+          .status(404)
+          .json({ success: false, message: 'Employee not found' });
+      }
     }
 
-    const employee = await prisma.employeeList.findUnique({
-      where: { id: parseInt(employeeId, 10) },
-    });
-    if (!employee) {
-      return res
-        .status(404)
-        .json({ success: false, message: 'Employee not found' });
-    }
-
-    const assetCondition = await prisma.assetCondition.findUnique({
-      where: { id: parseInt(assetConditionId, 10) },
-    });
-    if (!assetCondition) {
-      return res
-        .status(404)
-        .json({ success: false, message: 'AssetCondition not found' });
+    if (assetConditionId != null && assetConditionId !== '') {
+      const assetCondition = await prisma.assetCondition.findUnique({
+        where: { id: parseInt(assetConditionId, 10) },
+      });
+      if (!assetCondition) {
+        return res
+          .status(404)
+          .json({ success: false, message: 'AssetCondition not found' });
+      }
     }
 
     // locationId now refers to a City record
-    const city = await prisma.city.findUnique({
-      where: { id: parseInt(locationId, 10) },
-    });
-    if (!city) {
-      return res
-        .status(404)
-        .json({ 
-          success: false, 
-          message: `City with id ${locationId} not found. Please ensure the city exists before creating an asset.` 
-        });
+    if (locationId != null && locationId !== '') {
+      const city = await prisma.city.findUnique({
+        where: { id: parseInt(locationId, 10) },
+      });
+      if (!city) {
+        return res
+          .status(404)
+          .json({ 
+            success: false, 
+            message: `City with id ${locationId} not found. Please ensure the city exists before creating an asset.` 
+          });
+      }
     }
 
     // Optional: validate countryId, stateId, assetBrandId if provided
@@ -173,18 +165,18 @@ exports.createNewAsset = async (req, res) => {
     // Create asset - try without include first to avoid relation issues
     const newAsset = await prisma.newAsset.create({
       data: {
-        name,
-        serialNo,
-        status,
+        name: name || null,
+        serialNo: serialNo || null,
+        status: status || null,
         description: description || null,
         image: imagePath,
         purchaseDate: parsedPurchaseDate,
         warrantyExpiry: parsedWarrantyExpiry,
-        assetCategoryId: parseInt(assetCategoryId, 10),
-        departmentId: parseInt(departmentId, 10),
-        employeeId: parseInt(employeeId, 10),
-        assetConditionId: parseInt(assetConditionId, 10),
-        locationId: parseInt(locationId, 10),
+        ...(assetCategoryId != null && assetCategoryId !== '' ? { assetCategoryId: parseInt(assetCategoryId, 10) } : {}),
+        ...(departmentId != null && departmentId !== '' ? { departmentId: parseInt(departmentId, 10) } : {}),
+        ...(employeeId != null && employeeId !== '' ? { employeeId: parseInt(employeeId, 10) } : {}),
+        ...(assetConditionId != null && assetConditionId !== '' ? { assetConditionId: parseInt(assetConditionId, 10) } : {}),
+        ...(locationId != null && locationId !== '' ? { locationId: parseInt(locationId, 10) } : {}),
         userId: finalUserId, // Set userId for member assets
         ...(countryId != null && countryId !== '' ? { countryId: parseInt(countryId, 10) } : {}),
         ...(stateId != null && stateId !== '' ? { stateId: parseInt(stateId, 10) } : {}),
@@ -299,30 +291,7 @@ exports.importNewAssetsFromExcel = async (req, res) => {
       }
     });
 
-    // Required columns (normalized names)
-    const requiredHeaders = [
-      'name',
-      'assetcategoryid',
-      'serialno',
-      'departmentid',
-      'employeeid',
-      'status',
-      'assetconditionid',
-      'locationid',
-    ];
-
-    const missingHeaders = requiredHeaders.filter(
-      (key) => !headerMap[key]
-    );
-
-    if (missingHeaders.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message:
-          'Missing required columns in Excel header row. Required (case-insensitive, spaces/underscores ignored): name, assetCategoryId, serialNo, departmentId, employeeId, status, assetConditionId, locationId',
-        missingHeaders,
-      });
-    }
+    // No strictly required columns now; previously name, assetCategoryId, serialNo, departmentId, employeeId, status, assetConditionId, locationId
 
     const getCellValue = (row, normalizedKey) => {
       const col = headerMap[normalizedKey];
@@ -428,28 +397,9 @@ exports.importNewAssetsFromExcel = async (req, res) => {
         rowUserId = user.userId;
       }
 
-      // Basic per-row validation of required fields
-      if (
-        !name ||
-        !assetCategoryId ||
-        !serialNo ||
-        !departmentId ||
-        !employeeId ||
-        !status ||
-        !assetConditionId ||
-        !locationId
-      ) {
-        rowErrors.push({
-          rowNumber,
-          reason:
-            'Missing required fields (name, assetCategoryId, serialNo, departmentId, employeeId, status, assetConditionId, locationId)',
-        });
-        return;
-      }
-
       // Validate foreign keys
       let rowInvalid = false;
-      if (!validAssetCategoryIds.has(assetCategoryId)) {
+      if (assetCategoryId !== null && !validAssetCategoryIds.has(assetCategoryId)) {
         rowInvalid = true;
         rowErrors.push({
           rowNumber,
@@ -458,7 +408,7 @@ exports.importNewAssetsFromExcel = async (req, res) => {
           reason: `AssetCategory with id ${assetCategoryId} not found`,
         });
       }
-      if (!validDepartmentIds.has(departmentId)) {
+      if (departmentId !== null && !validDepartmentIds.has(departmentId)) {
         rowInvalid = true;
         rowErrors.push({
           rowNumber,
@@ -467,7 +417,7 @@ exports.importNewAssetsFromExcel = async (req, res) => {
           reason: `Department with id ${departmentId} not found`,
         });
       }
-      if (!validEmployeeIds.has(employeeId)) {
+      if (employeeId !== null && !validEmployeeIds.has(employeeId)) {
         rowInvalid = true;
         rowErrors.push({
           rowNumber,
@@ -476,7 +426,7 @@ exports.importNewAssetsFromExcel = async (req, res) => {
           reason: `Employee with id ${employeeId} not found`,
         });
       }
-      if (!validAssetConditionIds.has(assetConditionId)) {
+      if (assetConditionId !== null && !validAssetConditionIds.has(assetConditionId)) {
         rowInvalid = true;
         rowErrors.push({
           rowNumber,
@@ -485,7 +435,7 @@ exports.importNewAssetsFromExcel = async (req, res) => {
           reason: `AssetCondition with id ${assetConditionId} not found`,
         });
       }
-      if (!validLocationIds.has(locationId)) {
+      if (locationId !== null && !validLocationIds.has(locationId)) {
         rowInvalid = true;
         rowErrors.push({
           rowNumber,
