@@ -358,16 +358,27 @@ exports.gitPull = async (req, res) => {
     const npmCommand = isWin ? 'npm.cmd' : 'npm';
     const npxCommand = isWin ? 'npx.cmd' : 'npx';
 
-    // 1) Stop PM2 process
-    await runCommandWithStreaming(res, {
-      step: 'stop-pm2',
-      command: pm2Command,
-      args: ['stop', 'iot'],
-      cwd: projectRoot,
-      startMessage: 'Stopping PM2 process "iot"...',
-      successMessage: 'PM2 process "iot" stopped successfully.',
-      errorMessage: 'Failed to stop PM2 process "iot".',
-    });
+    // 1) Stop PM2 process (this will stop the current server, so we need to handle it carefully)
+    try {
+      await runCommandWithStreaming(res, {
+        step: 'stop-pm2',
+        command: pm2Command,
+        args: ['stop', 'iot'],
+        cwd: projectRoot,
+        startMessage: 'Stopping PM2 process "iot"...',
+        successMessage: 'PM2 process "iot" stopped successfully.',
+        errorMessage: 'Failed to stop PM2 process "iot".',
+      });
+    } catch (error) {
+      // If stop fails (maybe already stopped), continue anyway
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'warning',
+          step: 'stop-pm2',
+          message: 'PM2 stop failed or process already stopped. Continuing...',
+        })}\n\n`
+      );
+    }
 
     // 2) Git pull
     await runCommandWithStreaming(res, {
@@ -403,15 +414,35 @@ exports.gitPull = async (req, res) => {
     });
 
     // 5) Start PM2 process again
-    await runCommandWithStreaming(res, {
-      step: 'start-pm2',
-      command: pm2Command,
-      args: ['start', 'iot'],
-      cwd: projectRoot,
-      startMessage: 'Starting PM2 process "iot"...',
-      successMessage: 'PM2 process "iot" started successfully.',
-      errorMessage: 'Failed to start PM2 process "iot".',
-    });
+    try {
+      await runCommandWithStreaming(res, {
+        step: 'start-pm2',
+        command: pm2Command,
+        args: ['start', 'iot'],
+        cwd: projectRoot,
+        startMessage: 'Starting PM2 process "iot"...',
+        successMessage: 'PM2 process "iot" started successfully.',
+        errorMessage: 'Failed to start PM2 process "iot".',
+      });
+    } catch (error) {
+      // If start fails, try restart instead
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'info',
+          step: 'start-pm2',
+          message: 'Start failed, trying restart instead...',
+        })}\n\n`
+      );
+      await runCommandWithStreaming(res, {
+        step: 'restart-pm2',
+        command: pm2Command,
+        args: ['restart', 'iot'],
+        cwd: projectRoot,
+        startMessage: 'Restarting PM2 process "iot"...',
+        successMessage: 'PM2 process "iot" restarted successfully.',
+        errorMessage: 'Failed to restart PM2 process "iot".',
+      });
+    }
 
     // All steps done
     res.write(
