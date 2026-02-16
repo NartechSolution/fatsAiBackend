@@ -190,7 +190,20 @@ exports.createNewAsset = async (req, res) => {
       finalUserId = user.userId;
     }
 
-    // Create asset - try without include first to avoid relation issues
+    // Build relation connects (Prisma SQL Server may require connect over scalar IDs)
+    const connectAssetCategory = assetCategoryId != null && assetCategoryId !== '' ? { connect: { id: parseInt(assetCategoryId, 10) } } : undefined;
+    const connectDepartment = departmentId != null && departmentId !== '' ? { connect: { id: parseInt(departmentId, 10) } } : undefined;
+    const connectEmployee = employeeId != null && employeeId !== '' ? { connect: { id: parseInt(employeeId, 10) } } : undefined;
+    const connectAssetCondition = assetConditionId != null && assetConditionId !== '' ? { connect: { id: parseInt(assetConditionId, 10) } } : undefined;
+    const connectLocation = locationId != null && locationId !== '' ? { connect: { id: parseInt(locationId, 10) } } : undefined;
+    const connectCountry = countryId != null && countryId !== '' ? { connect: { id: parseInt(countryId, 10) } } : undefined;
+    const connectState = stateId != null && stateId !== '' ? { connect: { id: parseInt(stateId, 10) } } : undefined;
+    const connectAssetBrand = assetBrandId != null && assetBrandId !== '' ? { connect: { id: parseInt(assetBrandId, 10) } } : undefined;
+    const connectBuilding = buildingId != null && buildingId !== '' ? { connect: { id: parseInt(buildingId, 10) } } : undefined;
+    const connectFloor = floorId != null && floorId !== '' ? { connect: { id: parseInt(floorId, 10) } } : undefined;
+    const connectUser = finalUserId ? { connect: { id: finalUserId } } : undefined;
+
+    // Create asset using relation connect syntax for SQL Server compatibility
     const newAsset = await prisma.newAsset.create({
       data: {
         name: name || null,
@@ -200,17 +213,17 @@ exports.createNewAsset = async (req, res) => {
         image: imagePath,
         purchaseDate: parsedPurchaseDate,
         warrantyExpiry: parsedWarrantyExpiry,
-        ...(assetCategoryId != null && assetCategoryId !== '' ? { assetCategoryId: parseInt(assetCategoryId, 10) } : {}),
-        ...(departmentId != null && departmentId !== '' ? { departmentId: parseInt(departmentId, 10) } : {}),
-        ...(employeeId != null && employeeId !== '' ? { employeeId: parseInt(employeeId, 10) } : {}),
-        ...(assetConditionId != null && assetConditionId !== '' ? { assetConditionId: parseInt(assetConditionId, 10) } : {}),
-        ...(locationId != null && locationId !== '' ? { locationId: parseInt(locationId, 10) } : {}),
-        userId: finalUserId, // Set userId for member assets
-        ...(countryId != null && countryId !== '' ? { countryId: parseInt(countryId, 10) } : {}),
-        ...(stateId != null && stateId !== '' ? { stateId: parseInt(stateId, 10) } : {}),
-        ...(assetBrandId != null && assetBrandId !== '' ? { assetBrandId: parseInt(assetBrandId, 10) } : {}),
-        ...(buildingId != null && buildingId !== '' ? { buildingId: parseInt(buildingId, 10) } : {}),
-        ...(floorId != null && floorId !== '' ? { floorId: parseInt(floorId, 10) } : {}),
+        ...(connectAssetCategory && { assetCategory: connectAssetCategory }),
+        ...(connectDepartment && { department: connectDepartment }),
+        ...(connectEmployee && { employee: connectEmployee }),
+        ...(connectAssetCondition && { assetCondition: connectAssetCondition }),
+        ...(connectLocation && { location: connectLocation }),
+        ...(connectUser && { user: connectUser }),
+        ...(connectCountry && { country: connectCountry }),
+        ...(connectState && { state: connectState }),
+        ...(connectAssetBrand && { assetBrand: connectAssetBrand }),
+        ...(connectBuilding && { building: connectBuilding }),
+        ...(connectFloor && { floor: connectFloor }),
         ...(brandModel !== undefined ? { brandModel: brandModel || null } : {}),
         ...(quantity !== undefined ? { quantity: quantity === '' || quantity == null ? null : parseInt(quantity, 10) } : {}),
         ...(zoneArea !== undefined ? { zoneArea: zoneArea || null } : {}),
