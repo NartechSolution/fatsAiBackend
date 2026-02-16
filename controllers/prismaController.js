@@ -332,12 +332,7 @@ exports.generatePrisma = async (req, res) => {
   }
 };
 
-// Full deployment flow on /api/prisma/git-pull:
-// Run git pull, npm install, prisma generate WHILE SERVER IS RUNNING, then pm2 restart at the end.
-// We do NOT run "pm2 stop" first — that would kill this process and the rest would never run.
-// 1) git pull origin main  2) npm install  3) npx prisma generate  4) pm2 restart iot
-//
-// If you still see "stop-pm2" in logs, the running process has OLD code — run once:  pm2 restart iot
+// /api/prisma/git-pull: run git pull origin main only (no npm, prisma, or pm2).
 exports.gitPull = async (req, res) => {
   try {
     const projectRoot = path.join(__dirname, '..');
@@ -350,16 +345,10 @@ exports.gitPull = async (req, res) => {
     res.write(
       `data: ${JSON.stringify({
         type: 'start',
-        message: 'Starting deployment: git pull -> npm install -> prisma generate -> pm2 restart',
+        message: 'Pulling from origin main...',
       })}\n\n`
     );
 
-    const isWin = process.platform === 'win32';
-    const pm2Command = isWin ? 'pm2.cmd' : 'pm2';
-    const npmCommand = isWin ? 'npm.cmd' : 'npm';
-    const npxCommand = isWin ? 'npx.cmd' : 'npx';
-
-    // 1) Git pull
     await runCommandWithStreaming(res, {
       step: 'git-pull',
       command: 'git',
@@ -370,50 +359,10 @@ exports.gitPull = async (req, res) => {
       errorMessage: 'Failed to pull from git main branch.',
     });
 
-    // 2) npm install
-    await runCommandWithStreaming(res, {
-      step: 'npm-install',
-      command: npmCommand,
-      args: ['install'],
-      cwd: projectRoot,
-      startMessage: 'Running npm install...',
-      successMessage: 'npm install completed successfully.',
-      errorMessage: 'Failed to run npm install.',
-    });
-
-    // 3) npx prisma generate
-    await runCommandWithStreaming(res, {
-      step: 'prisma-generate',
-      command: npxCommand,
-      args: ['prisma', 'generate'],
-      cwd: projectRoot,
-      startMessage: 'Generating Prisma client (npx prisma generate)...',
-      successMessage: 'Prisma client generated successfully.',
-      errorMessage: 'Failed to generate Prisma client.',
-    });
-
-    // 4) pm2 restart iot (restart at the end; this process will exit, PM2 brings it back with new code)
-    res.write(
-      `data: ${JSON.stringify({
-        type: 'info',
-        step: 'restart-pm2',
-        message: 'Restarting PM2 "iot" — this process will exit; PM2 will start it again with new code.',
-      })}\n\n`
-    );
-    await runCommandWithStreaming(res, {
-      step: 'restart-pm2',
-      command: pm2Command,
-      args: ['restart', 'iot'],
-      cwd: projectRoot,
-      startMessage: 'Running pm2 restart iot...',
-      successMessage: 'PM2 restart sent. Server will come back with new code.',
-      errorMessage: 'Failed to restart PM2 process "iot".',
-    });
-
     res.write(
       `data: ${JSON.stringify({
         type: 'success',
-        message: 'Deployment completed: git pull -> npm install -> prisma generate -> pm2 restart',
+        message: 'Git pull from origin main completed.',
       })}\n\n`
     );
     res.write(`data: ${JSON.stringify({ type: 'end' })}\n\n`);
@@ -423,8 +372,7 @@ exports.gitPull = async (req, res) => {
     res.write(
       `data: ${JSON.stringify({
         type: 'error',
-        message:
-          'Deployment failed while running one of the steps (pm2 / git / npm / prisma). Check logs for details.',
+        message: 'Git pull failed. Check logs for details.',
         error: error.message,
       })}\n\n`
     );
