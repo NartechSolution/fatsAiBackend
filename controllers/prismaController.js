@@ -116,6 +116,115 @@ async function disconnectPrisma() {
   return false;
 }
 
+// Helper to run shell commands sequentially with SSE streaming
+async function runCommandWithStreaming(res, options) {
+  const {
+    step,
+    command,
+    args = [],
+    cwd,
+    startMessage,
+    successMessage,
+    errorMessage,
+  } = options;
+
+  // Send step start message
+  if (startMessage) {
+    res.write(
+      `data: ${JSON.stringify({
+        type: 'step-start',
+        step,
+        message: startMessage,
+      })}\n\n`
+    );
+  }
+
+  return new Promise((resolve, reject) => {
+    const childProcess = spawn(command, args, {
+      cwd,
+      shell: true,
+      stdio: ['inherit', 'pipe', 'pipe'],
+    });
+
+    let output = '';
+
+    childProcess.stdout.on('data', (data) => {
+      const text = data.toString();
+      output += text;
+      console.log(`${step} stdout:`, text);
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'stdout',
+          step,
+          data: text,
+          timestamp: new Date().toISOString(),
+        })}\n\n`
+      );
+    });
+
+    childProcess.stderr.on('data', (data) => {
+      const text = data.toString();
+      output += text;
+      console.error(`${step} stderr:`, text);
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'stderr',
+          step,
+          data: text,
+          timestamp: new Date().toISOString(),
+        })}\n\n`
+      );
+    });
+
+    childProcess.on('close', (code) => {
+      if (code === 0) {
+        if (successMessage) {
+          res.write(
+            `data: ${JSON.stringify({
+              type: 'step-success',
+              step,
+              message: successMessage,
+              exitCode: code,
+            })}\n\n`
+          );
+        }
+        resolve({ code, output });
+      } else {
+        const msg =
+          errorMessage ||
+          `Step "${step}" failed with exit code ${code}`;
+        console.error(msg);
+        res.write(
+          `data: ${JSON.stringify({
+            type: 'step-error',
+            step,
+            message: msg,
+            exitCode: code,
+            output,
+          })}\n\n`
+        );
+        reject(new Error(msg));
+      }
+    });
+
+    childProcess.on('error', (error) => {
+      const msg =
+        errorMessage ||
+        `Error while running step "${step}": ${error.message}`;
+      console.error(msg);
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'step-error',
+          step,
+          message: msg,
+          error: error.message,
+        })}\n\n`
+      );
+      reject(error);
+    });
+  });
+}
+
 // Generate Prisma Client with real-time terminal output
 exports.generatePrisma = async (req, res) => {
   try {
@@ -218,7 +327,12 @@ exports.generatePrisma = async (req, res) => {
   }
 };
 
-// Git pull from main branch with real-time terminal output
+// Full deployment flow on /api/prisma/git-pull:
+// 1) pm2 stop iot
+// 2) git pull origin main
+// 3) npm install
+// 4) npx prisma generate
+// 5) pm2 start iot
 exports.gitPull = async (req, res) => {
   try {
     // Get the project root directory
@@ -231,60 +345,94 @@ exports.gitPull = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     
     // Send initial message
-    res.write(`data: ${JSON.stringify({ type: 'start', message: 'Starting git pull from main branch...' })}\n\n`);
-    
-    // Execute git pull origin main command with spawn for real-time output
-    const command = process.platform === 'win32' ? 'git' : 'git';
-    const args = ['pull', 'origin', 'main'];
-    
-    const childProcess = spawn(command, args, {
+    res.write(
+      `data: ${JSON.stringify({
+        type: 'start',
+        message:
+          'Starting deployment: stop pm2 -> git pull -> npm install -> prisma generate -> start pm2',
+      })}\n\n`
+    );
+
+    const isWin = process.platform === 'win32';
+    const pm2Command = isWin ? 'pm2.cmd' : 'pm2';
+    const npmCommand = isWin ? 'npm.cmd' : 'npm';
+    const npxCommand = isWin ? 'npx.cmd' : 'npx';
+
+    // 1) Stop PM2 process
+    await runCommandWithStreaming(res, {
+      step: 'stop-pm2',
+      command: pm2Command,
+      args: ['stop', 'iot'],
       cwd: projectRoot,
-      shell: true,
-      stdio: ['inherit', 'pipe', 'pipe']
+      startMessage: 'Stopping PM2 process "iot"...',
+      successMessage: 'PM2 process "iot" stopped successfully.',
+      errorMessage: 'Failed to stop PM2 process "iot".',
     });
-    
-    let output = '';
-    
-    // Stream stdout
-    childProcess.stdout.on('data', (data) => {
-      const text = data.toString();
-      output += text;
-      console.log('Git stdout:', text);
-      res.write(`data: ${JSON.stringify({ type: 'stdout', data: text })}\n\n`);
+
+    // 2) Git pull
+    await runCommandWithStreaming(res, {
+      step: 'git-pull',
+      command: 'git',
+      args: ['pull', 'origin', 'main'],
+      cwd: projectRoot,
+      startMessage: 'Pulling latest code from git (origin/main)...',
+      successMessage: 'Git pull completed successfully.',
+      errorMessage: 'Failed to pull from git main branch.',
     });
-    
-    // Stream stderr
-    childProcess.stderr.on('data', (data) => {
-      const text = data.toString();
-      output += text;
-      console.error('Git stderr:', text);
-      res.write(`data: ${JSON.stringify({ type: 'stderr', data: text })}\n\n`);
+
+    // 3) npm install
+    await runCommandWithStreaming(res, {
+      step: 'npm-install',
+      command: npmCommand,
+      args: ['install'],
+      cwd: projectRoot,
+      startMessage: 'Running npm install...',
+      successMessage: 'npm install completed successfully.',
+      errorMessage: 'Failed to run npm install.',
     });
-    
-    // Handle process completion
-    childProcess.on('close', (code) => {
-      if (code === 0) {
-        console.log('Git pull completed successfully');
-        res.write(`data: ${JSON.stringify({ type: 'success', message: 'Git pull from main branch completed successfully', output: output })}\n\n`);
-      } else {
-        console.error('Git pull failed with code:', code);
-        res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to pull from git main branch', code: code, output: output })}\n\n`);
-      }
-      res.write(`data: ${JSON.stringify({ type: 'end' })}\n\n`);
-      res.end();
+
+    // 4) npx prisma generate
+    await runCommandWithStreaming(res, {
+      step: 'prisma-generate',
+      command: npxCommand,
+      args: ['prisma', 'generate'],
+      cwd: projectRoot,
+      startMessage: 'Generating Prisma client (npx prisma generate)...',
+      successMessage: 'Prisma client generated successfully.',
+      errorMessage: 'Failed to generate Prisma client.',
     });
-    
-    // Handle process errors
-    childProcess.on('error', (error) => {
-      console.error('Error pulling from git:', error);
-      res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to pull from git main branch', error: error.message })}\n\n`);
-      res.write(`data: ${JSON.stringify({ type: 'end' })}\n\n`);
-      res.end();
+
+    // 5) Start PM2 process again
+    await runCommandWithStreaming(res, {
+      step: 'start-pm2',
+      command: pm2Command,
+      args: ['start', 'iot'],
+      cwd: projectRoot,
+      startMessage: 'Starting PM2 process "iot"...',
+      successMessage: 'PM2 process "iot" started successfully.',
+      errorMessage: 'Failed to start PM2 process "iot".',
     });
-    
+
+    // All steps done
+    res.write(
+      `data: ${JSON.stringify({
+        type: 'success',
+        message:
+          'Deployment completed successfully: pm2 stop -> git pull -> npm install -> prisma generate -> pm2 start',
+      })}\n\n`
+    );
+    res.write(`data: ${JSON.stringify({ type: 'end' })}\n\n`);
+    res.end();
   } catch (error) {
     console.error('Error in gitPull controller:', error);
-    res.write(`data: ${JSON.stringify({ type: 'error', message: 'Failed to pull from git main branch', error: error.message })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({
+        type: 'error',
+        message:
+          'Deployment failed while running one of the steps (pm2 / git / npm / prisma). Check logs for details.',
+        error: error.message,
+      })}\n\n`
+    );
     res.write(`data: ${JSON.stringify({ type: 'end' })}\n\n`);
     res.end();
   }
