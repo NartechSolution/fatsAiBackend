@@ -4,6 +4,7 @@ const { sendOtpEmail } = require('../utils/emailUtils');
 
 // JWT secret key - should be in environment variables in production
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '90d';
 const OTP_EXPIRY_MINUTES = parseInt(process.env.ADMIN_LOGIN_OTP_EXPIRY_MINUTES || '5', 10);
 const MAX_OTP_ATTEMPTS = parseInt(process.env.ADMIN_LOGIN_MAX_ATTEMPTS || '5', 10);
 
@@ -254,7 +255,7 @@ function generateTokenAndResponse(admin, res) {
   const token = jwt.sign(
     { adminId: admin.id, email: admin.email, role: 'admin' },
     JWT_SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: JWT_EXPIRES_IN }
   );
   
   // Return admin info and token

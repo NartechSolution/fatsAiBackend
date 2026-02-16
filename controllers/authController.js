@@ -15,6 +15,7 @@ const { logActivity } = require('../utils/auditLogger');
 
 // JWT secret key - should be in environment variables in production
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '90d';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:2507';
 
 // Validation schema for comprehensive signup
@@ -166,7 +167,7 @@ exports.signup = async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: JWT_EXPIRES_IN }
     );
 
     // Return user info (excluding password) and token
@@ -486,7 +487,7 @@ exports.createUser = async (req, res, next) => {
     const token = jwt.sign(
       { userId: result.user.id, email: result.user.email },
       JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: JWT_EXPIRES_IN }
     );
 
     return res.status(201).json({
@@ -608,7 +609,7 @@ function generateTokenAndResponse(user, res) {
   const token = jwt.sign(
     { userId: user.id, email: user.email },
     JWT_SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: JWT_EXPIRES_IN }
   );
 
   // Return user info and token
