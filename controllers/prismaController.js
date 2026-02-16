@@ -335,10 +335,9 @@ exports.generatePrisma = async (req, res) => {
 // Full deployment flow on /api/prisma/git-pull:
 // Run git pull, npm install, prisma generate WHILE SERVER IS RUNNING, then pm2 restart at the end.
 // We do NOT run "pm2 stop" first — that would kill this process and the rest would never run.
-// 1) git pull origin main
-// 2) npm install
-// 3) npx prisma generate
-// 4) pm2 restart iot (restart loads new code; this process will exit but PM2 brings it back)
+// 1) git pull origin main  2) npm install  3) npx prisma generate  4) pm2 restart iot
+//
+// If you still see "stop-pm2" in logs, the running process has OLD code — run once:  pm2 restart iot
 exports.gitPull = async (req, res) => {
   try {
     const projectRoot = path.join(__dirname, '..');
