@@ -57,6 +57,18 @@ exports.createNewAsset = async (req, res) => {
       buidlingNumber,
     } = req.body;
 
+    // Auto-generate serial number if not provided or empty
+    let finalSerialNo = serialNo;
+    if (
+      finalSerialNo === undefined ||
+      finalSerialNo === null ||
+      String(finalSerialNo).trim() === ''
+    ) {
+      // Generate SN followed by 8 random digits, e.g. SN10111012
+      const randomPart = Math.floor(10000000 + Math.random() * 90000000);
+      finalSerialNo = `SN${randomPart}`;
+    }
+
     // Check related records only when IDs are provided
     if (assetCategoryId != null && assetCategoryId !== '') {
       const assetCategory = await prisma.assetCategory.findUnique({
@@ -207,7 +219,7 @@ exports.createNewAsset = async (req, res) => {
     const newAsset = await prisma.newAsset.create({
       data: {
         name: name || null,
-        serialNo: serialNo || null,
+        serialNo: finalSerialNo || null,
         status: status || null,
         description: description || null,
         image: imagePath,
