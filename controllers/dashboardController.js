@@ -268,18 +268,12 @@ const getTotalAssetsData = async () => {
 
 /**
  * Helper function to get active assets (from NewAsset model).
- * Active = has name, no maintenance record, and status is not "Inactive".
+ * Active = status is "active" (same as api/new-assets).
  */
 const getActiveAssetsData = async () => {
   const activeWhere = {
     ...newAssetTotalWhere,
-    logMaintenances: { none: {} },
-    AND: [
-      { name: { not: null } },
-      { name: { not: "" } },
-      { status: { not: "Inactive" } },
-      { status: { not: null } }
-    ]
+    status: "active"
   };
 
   const activeAssets = await prisma.newAsset.count({
@@ -354,13 +348,14 @@ const getWarningAssetsData = async () => {
 };
 
 /**
- * Helper function to get maintenance assets (from NewAsset model)
+ * Helper function to get maintenance assets (from NewAsset model).
+ * Under maintenance = status is "maintenance" (same as api/new-assets).
  */
 const getMaintenanceAssetsData = async () => {
   const maintenanceAssets = await prisma.newAsset.count({
     where: {
       ...newAssetTotalWhere,
-      logMaintenances: { some: {} }
+      status: "maintenance"
     }
   });
 
