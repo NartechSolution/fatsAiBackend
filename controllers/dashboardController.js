@@ -221,30 +221,41 @@ const getIoTSensorData = async () => {
 };
 
 /**
- * Helper function to get total assets with growth metrics
+ * Base filter: only NewAsset rows that count as "real" assets (have name set).
+ * Use this for total so count matches your actual asset list (e.g. 7 not 19).
+ */
+const newAssetTotalWhere = {
+  AND: [
+    { name: { not: null } },
+    { name: { not: "" } }
+  ]
+};
+
+/**
+ * Helper function to get total assets with growth metrics (from NewAsset model)
  */
 const getTotalAssetsData = async () => {
-  // Get total assets count
-  const totalAssets = await prisma.asset.count();
-  
-  // Get current date and previous month date for comparison
+  const totalAssets = await prisma.newAsset.count({
+    where: newAssetTotalWhere
+  });
+
   const previousMonthDate = new Date();
   previousMonthDate.setMonth(previousMonthDate.getMonth() - 1);
-  
-  // Get total assets count from previous month
-  const previousMonthTotalAssets = await prisma.asset.count({
+
+  const previousMonthTotalAssets = await prisma.newAsset.count({
     where: {
+      ...newAssetTotalWhere,
       createdAt: {
         lt: previousMonthDate
       }
     }
   });
-  
-  // Calculate growth percentage
-  const growthPercentage = previousMonthTotalAssets > 0 
-    ? Math.round(((totalAssets - previousMonthTotalAssets) / previousMonthTotalAssets) * 100) 
-    : 12; // Default to 12% if no previous data
-  
+
+  let growthPercentage = previousMonthTotalAssets > 0
+    ? Math.round(((totalAssets - previousMonthTotalAssets) / previousMonthTotalAssets) * 100)
+    : 12;
+  growthPercentage = Math.min(999, Math.max(-99, growthPercentage));
+
   return {
     count: totalAssets,
     growth: {
@@ -256,33 +267,40 @@ const getTotalAssetsData = async () => {
 };
 
 /**
- * Helper function to get active assets with growth metrics
+ * Helper function to get active assets (from NewAsset model).
+ * Active = has name, no maintenance record, and status is not "Inactive".
  */
 const getActiveAssetsData = async () => {
-  // Get active assets count (where assetStatus is "In Use")
-  const activeAssets = await prisma.asset.count({
-    where: { assetStatus: "In Use" }
+  const activeWhere = {
+    ...newAssetTotalWhere,
+    logMaintenances: { none: {} },
+    AND: [
+      { name: { not: null } },
+      { name: { not: "" } },
+      { status: { not: "Inactive" } },
+      { status: { not: null } }
+    ]
+  };
+
+  const activeAssets = await prisma.newAsset.count({
+    where: activeWhere
   });
-  
-  // Get current date and previous month date for comparison
+
   const previousMonthDate = new Date();
   previousMonthDate.setMonth(previousMonthDate.getMonth() - 1);
-  
-  // Get active assets count from previous month
-  const previousMonthActiveAssets = await prisma.asset.count({
+
+  const previousMonthActiveAssets = await prisma.newAsset.count({
     where: {
-      assetStatus: "In Use",
-      createdAt: {
-        lt: previousMonthDate
-      }
+      ...activeWhere,
+      createdAt: { lt: previousMonthDate }
     }
   });
-  
-  // Calculate growth percentage
-  const growthPercentage = previousMonthActiveAssets > 0 
-    ? Math.round(((activeAssets - previousMonthActiveAssets) / previousMonthActiveAssets) * 100) 
-    : 8; // Default to 8% if no previous data
-  
+
+  let growthPercentage = previousMonthActiveAssets > 0
+    ? Math.round(((activeAssets - previousMonthActiveAssets) / previousMonthActiveAssets) * 100)
+    : 8;
+  growthPercentage = Math.min(999, Math.max(-99, growthPercentage));
+
   return {
     count: activeAssets,
     growth: {
@@ -294,33 +312,37 @@ const getActiveAssetsData = async () => {
 };
 
 /**
- * Helper function to get warning assets with new warnings this week
+ * Helper function to get warning assets with new warnings this week (from NewAsset model)
  */
 const getWarningAssetsData = async () => {
-  // Get warning assets count (where assetCondition is "Poor" or "Fair")
-  const warningAssets = await prisma.asset.count({
-    where: {
-      assetCondition: {
-        in: ["Poor", "Fair"]
-      }
-    }
+  const conditions = await prisma.assetCondition.findMany({
+    where: { status: true },
+    select: { id: true, name: true }
   });
-  
-  // Get assets created in the last 7 days with poor/fair condition
+  const nameToId = (name) => conditions.find((c) => c.name.toLowerCase().includes(name.toLowerCase()))?.id;
+  const fairId = nameToId("Fair");
+  const poorId = nameToId("Poor");
+  const damagedId = nameToId("Damaged");
+  const warningConditionIds = [fairId, poorId, damagedId].filter(Boolean);
+
+  const whereWarning = warningConditionIds.length
+    ? { ...newAssetTotalWhere, assetConditionId: { in: warningConditionIds } }
+    : { ...newAssetTotalWhere, assetConditionId: { in: [] } };
+
+  const warningAssets = await prisma.newAsset.count({
+    where: whereWarning
+  });
+
   const oneWeekAgo = new Date();
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  
-  const newWarningAssetsThisWeek = await prisma.asset.count({
+
+  const newWarningAssetsThisWeek = await prisma.newAsset.count({
     where: {
-      assetCondition: {
-        in: ["Poor", "Fair"]
-      },
-      createdAt: {
-        gte: oneWeekAgo
-      }
+      ...whereWarning,
+      createdAt: { gte: oneWeekAgo }
     }
   });
-  
+
   return {
     count: warningAssets,
     new: {
@@ -332,17 +354,27 @@ const getWarningAssetsData = async () => {
 };
 
 /**
- * Helper function to get maintenance assets with scheduled maintenance today
+ * Helper function to get maintenance assets (from NewAsset model)
  */
 const getMaintenanceAssetsData = async () => {
-  // Get under maintenance assets count
-  const maintenanceAssets = await prisma.asset.count({
-    where: { assetStatus: "Under Maintenance" }
+  const maintenanceAssets = await prisma.newAsset.count({
+    where: {
+      ...newAssetTotalWhere,
+      logMaintenances: { some: {} }
+    }
   });
-  
-  // Since we don't have a maintenance schedule table, we'll use a placeholder value
-  const scheduledToday = 3; // Placeholder value
-  
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+
+  const scheduledToday = await prisma.logMaintenance.count({
+    where: {
+      startDate: { gte: todayStart, lt: todayEnd }
+    }
+  });
+
   return {
     count: maintenanceAssets,
     scheduled: {
@@ -366,15 +398,14 @@ const getIotDevicesData = async () => {
 };
 
 /**
- * Helper function to get new assets count (NewAsset with no tag assigned - tagNumber null)
- * New asset = has no linked AssetTag
+ * Helper function to get new assets count (from NewAsset model).
+ * "New asset" = tagNumber is null = no tag assigned (untagged).
  */
 const getNewAssetsData = async () => {
   const newAssetsCount = await prisma.newAsset.count({
     where: {
-      assetTags: {
-        none: {}
-      }
+      ...newAssetTotalWhere,
+      assetTags: { none: {} }
     }
   });
 
