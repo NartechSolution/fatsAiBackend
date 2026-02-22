@@ -366,6 +366,24 @@ const getIotDevicesData = async () => {
 };
 
 /**
+ * Helper function to get new assets count (NewAsset with no tag assigned - tagNumber null)
+ * New asset = has no linked AssetTag
+ */
+const getNewAssetsData = async () => {
+  const newAssetsCount = await prisma.newAsset.count({
+    where: {
+      assetTags: {
+        none: {}
+      }
+    }
+  });
+
+  return {
+    count: newAssetsCount
+  };
+};
+
+/**
  * Get dashboard statistics for the main dashboard
  * - Total Assets with growth metrics
  * - Active Assets with growth metrics
@@ -375,13 +393,14 @@ const getIotDevicesData = async () => {
  */
 exports.getDashboardStats = async (req, res) => {
   try {
-    // Get data for all dashboard cards using helper functions
-    const [totalAssetsData, activeAssetsData, warningAssetsData, maintenanceAssetsData, iotDevicesData] = await Promise.all([
+    // Get data for all dashboard cards using helper functions (including new assets - no tag assigned)
+    const [totalAssetsData, activeAssetsData, warningAssetsData, maintenanceAssetsData, iotDevicesData, newAssetsData] = await Promise.all([
       getTotalAssetsData(),
       getActiveAssetsData(),
       getWarningAssetsData(),
       getMaintenanceAssetsData(),
-      getIotDevicesData()
+      getIotDevicesData(),
+      getNewAssetsData()
     ]);
     
     res.status(200).json({
@@ -389,7 +408,8 @@ exports.getDashboardStats = async (req, res) => {
       activeAssets: activeAssetsData,
       warningAssets: warningAssetsData,
       maintenanceAssets: maintenanceAssetsData,
-      iotDevices: iotDevicesData
+      iotDevices: iotDevicesData,
+      newAssets: newAssetsData
     });
   } catch (error) {
     console.error('Error fetching dashboard statistics:', error);
