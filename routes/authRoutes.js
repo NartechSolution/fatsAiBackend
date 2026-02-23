@@ -28,6 +28,13 @@ router.put('/members/:id/status', authMiddleware.verifyToken, memberController.u
 router.delete('/members/:id', authMiddleware.verifyToken, memberController.deleteMember);
 router.get('/members/:id/invoice', authMiddleware.verifyToken, memberController.getMemberInvoice);
 
+// Admin impersonate member (login as that member)
+router.post(
+  '/members/:id/impersonate',
+  authMiddleware.verifyAdminToken,
+  memberController.impersonateMember
+);
+
 // Member payment slip upload
 router.post(
   '/members/:id/payment-slip',

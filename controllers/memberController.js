@@ -2,8 +2,13 @@ const prisma = require('../prisma/client');
 const { createError } = require('../utils/createError');
 const path = require('path');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
 const { logActivity } = require('../utils/auditLogger');
 const { getDocumentUrl } = require('../utils/uploadUtils');
+
+// JWT configuration (keep in sync with authController)
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '90d';
 
 /**
  * Get members list with pagination, search, and filtering
@@ -868,6 +873,77 @@ exports.uploadPaymentSlipe = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to upload payment slip',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Admin impersonates a member (login as member)
+ * POST /api/auth/members/:id/impersonate
+ * Requires a valid admin JWT (verifyAdminToken middleware)
+ */
+exports.impersonateMember = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Ensure this is called by an authenticated admin
+    if (!req.admin || !req.admin.adminId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin access required'
+      });
+    }
+
+    const member = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!member) {
+      return res.status(404).json({
+        success: false,
+        message: 'Member not found'
+      });
+    }
+
+    // Create a JWT for the selected member, tagging who impersonated them
+    const tokenPayload = {
+      userId: member.id,
+      email: member.email,
+      impersonatedBy: req.admin.adminId,
+      impersonatedAt: new Date().toISOString()
+    };
+
+    const token = jwt.sign(tokenPayload, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_IN
+    });
+
+    // Log audit trail
+    logActivity(
+      'Admin Impersonate Member',
+      req.admin.adminId,
+      member.email,
+      'Success',
+      `Admin logged in as member ${member.email}`
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Impersonation login token generated successfully',
+      token,
+      member: {
+        id: member.id,
+        email: member.email,
+        username: member.username,
+        firstName: member.firstName,
+        lastName: member.lastName
+      }
+    });
+  } catch (error) {
+    console.error('Error impersonating member:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to login as member',
       error: error.message
     });
   }
