@@ -410,6 +410,143 @@ const getNewAssetsData = async () => {
 };
 
 /**
+ * Helper function to get department statistics
+ * - Total departments
+ * - Active departments
+ * - Inactive departments
+ */
+const getDepartmentStats = async () => {
+  const [totalDepartments, activeDepartments, inactiveDepartments] = await Promise.all([
+    prisma.department.count(),
+    prisma.department.count({
+      where: {
+        status: { in: ['active', 'Active'] }
+      }
+    }),
+    prisma.department.count({
+      where: {
+        status: { in: ['inactive', 'Inactive'] }
+      }
+    })
+  ]);
+
+  return {
+    total: totalDepartments,
+    active: activeDepartments,
+    inactive: inactiveDepartments
+  };
+};
+
+/**
+ * Helper function to get asset category statistics
+ * - Total asset categories
+ * - Total subcategories
+ * - Total asset items (from NewAsset model)
+ */
+const getAssetCategoryStats = async () => {
+  const [categoryCount, subCategoryCount, assetItemCount] = await Promise.all([
+    prisma.assetCategory.count(),
+    prisma.subCategory.count(),
+    prisma.newAsset.count({
+      where: newAssetTotalWhere
+    })
+  ]);
+
+  return {
+    categories: categoryCount,
+    subCategories: subCategoryCount,
+    items: assetItemCount
+  };
+};
+
+/**
+ * Helper function to get employee statistics
+ * - Total employees
+ * - Active employees
+ * - Employees on leave
+ */
+const getEmployeeStats = async () => {
+  const [totalEmployees, activeEmployees, onLeaveEmployees] = await Promise.all([
+    prisma.employeeList.count(),
+    prisma.employeeList.count({
+      where: {
+        status: { in: ['active', 'Active'] }
+      }
+    }),
+    prisma.employeeList.count({
+      where: {
+        status: { in: ['on_leave', 'On Leave', 'on leave'] }
+      }
+    })
+  ]);
+
+  return {
+    total: totalEmployees,
+    active: activeEmployees,
+    onLeave: onLeaveEmployees
+  };
+};
+
+/**
+ * Helper function to get roles and permissions statistics
+ * - Total roles
+ * - Total permissions
+ * - Total custom role-permission assignments
+ */
+const getRolePermissionStats = async () => {
+  const [roleCount, permissionCount, customAssignments] = await Promise.all([
+    prisma.role.count(),
+    prisma.permission.count(),
+    prisma.rolePermission.count()
+  ]);
+
+  return {
+    roles: roleCount,
+    permissions: permissionCount,
+    custom: customAssignments
+  };
+};
+
+/**
+ * Helper function to get cities and locations statistics
+ * - Total cities
+ * - Total locations
+ * - Total warehouses (using ManageLocation as warehouse-like entities)
+ */
+const getCityLocationStats = async () => {
+  const [cityCount, locationCount, warehouseCount] = await Promise.all([
+    prisma.city.count(),
+    prisma.location.count(),
+    prisma.manageLocation.count()
+  ]);
+
+  return {
+    cities: cityCount,
+    locations: locationCount,
+    warehouses: warehouseCount
+  };
+};
+
+/**
+ * Helper function to get brands and vendors statistics
+ * - Total vendors (using AssetBrand as vendor-like entities)
+ * - Total brands
+ * - Total contracts (placeholder, adjust when contract model is available)
+ */
+const getBrandVendorStats = async () => {
+  const [vendorCount, brandCount] = await Promise.all([
+    prisma.assetBrand.count(),
+    prisma.brand.count()
+  ]);
+
+  return {
+    vendors: vendorCount,
+    brands: brandCount,
+    contracts: 0
+  };
+};
+
+/**
  * Get dashboard statistics for the main dashboard
  * - Total Assets with growth metrics
  * - Active Assets with growth metrics
@@ -440,6 +577,47 @@ exports.getDashboardStats = async (req, res) => {
   } catch (error) {
     console.error('Error fetching dashboard statistics:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
+  }
+};
+
+/**
+ * Get statistics for the admin dashboard cards
+ * - Departments
+ * - Asset Categories
+ * - Employees
+ * - Roles & Permissions
+ * - Cities & Locations
+ * - Brands & Vendors
+ */
+exports.getAdminDashboardStats = async (req, res) => {
+  try {
+    const [
+      departmentStats,
+      assetCategoryStats,
+      employeeStats,
+      rolePermissionStats,
+      cityLocationStats,
+      brandVendorStats
+    ] = await Promise.all([
+      getDepartmentStats(),
+      getAssetCategoryStats(),
+      getEmployeeStats(),
+      getRolePermissionStats(),
+      getCityLocationStats(),
+      getBrandVendorStats()
+    ]);
+
+    res.status(200).json({
+      departments: departmentStats,
+      assetCategories: assetCategoryStats,
+      employees: employeeStats,
+      rolesPermissions: rolePermissionStats,
+      citiesLocations: cityLocationStats,
+      brandsVendors: brandVendorStats
+    });
+  } catch (error) {
+    console.error('Error fetching admin dashboard statistics:', error);
+    res.status(500).json({ error: 'Failed to fetch admin dashboard statistics' });
   }
 };
 
