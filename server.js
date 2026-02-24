@@ -87,6 +87,7 @@ const brandingAppearanceRoutes = require('./routes/brandingAppearanceRoutes');
 const authenticationSecurityRoutes = require('./routes/authenticationSecurityRoutes');
 const settingRolePermissionRoutes = require('./routes/settingRolePermissionRoutes');
 const notificationAlertRoutes = require('./routes/notificationAlertRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const apiIntegrationRoutes = require('./routes/apiIntegrationRoutes');
 const dataManagementRoutes = require('./routes/dataManagementRoutes');
 const languageLocalizationRoutes = require('./routes/languageLocalizationRoutes');
@@ -238,6 +239,7 @@ async function startServer() {
     app.use('/api/authentication-securities', authenticationSecurityRoutes);
     app.use('/api/setting-role-permissions', settingRolePermissionRoutes);
     app.use('/api/notification-alerts', notificationAlertRoutes);
+    app.use('/api/notifications', notificationRoutes);
     app.use('/api/api-integrations', apiIntegrationRoutes);
     app.use('/api/data-management', dataManagementRoutes);
     app.use('/api/language-localization', languageLocalizationRoutes);

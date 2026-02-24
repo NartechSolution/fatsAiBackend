@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const { logActivity } = require('../utils/auditLogger');
 const { getDocumentUrl } = require('../utils/uploadUtils');
 const { sendMultipleEmails } = require('../utils/emailUtils');
+const notificationModel = require('../models/notification');
 
 // JWT configuration (keep in sync with authController)
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -905,7 +906,7 @@ exports.uploadPaymentSlipe = async (req, res) => {
       `Payment slip uploaded for member ${updatedMember.email}`
     );
 
-    // Send email notifications to member and admin (non-blocking for main flow)
+    // Send email and in-app notifications to member and admin (non-blocking for main flow)
     (async () => {
       try {
         const adminNotificationEmail =
@@ -950,6 +951,34 @@ exports.uploadPaymentSlipe = async (req, res) => {
         };
 
         await sendMultipleEmails(emailPayload);
+
+        // Create in-app notifications for member and a generic admin notification
+        const notifications = [];
+
+        // Member notification (visible in member portal)
+        notifications.push({
+          title: 'Payment slip uploaded',
+          message:
+            'Your payment slip has been received and sent for review. You will be notified once it is verified.',
+          type: 'payment',
+          severity: 'info',
+          targetRole: 'member',
+          userId: updatedMember.id,
+          link: '/member/billing' // adjust to your member notification/payment page route
+        });
+
+        // Admin notification (visible in admin portal)
+        notifications.push({
+          title: 'New member payment slip uploaded',
+          message: `Member ${updatedMember.email} has uploaded a new payment slip.`,
+          type: 'payment',
+          severity: 'warning',
+          targetRole: 'admin',
+          adminId: null, // optional: attach to a specific admin id if you have it in context
+          link: '/admin/members' // adjust to your admin members/payment review page route
+        });
+
+        await notificationModel.createManyNotifications(notifications);
       } catch (notifyError) {
         console.error('Failed to send payment slip notification emails:', notifyError);
       }

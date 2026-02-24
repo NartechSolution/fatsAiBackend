@@ -95,6 +95,7 @@ model User {
   manageLocations    ManageLocation[]
   maintenances       Maintenance[]
   newAssets          NewAsset[]          // One-to-many: one User has many NewAssets
+  notifications      Notification[]
   
   @@map("users")
 }
@@ -121,6 +122,7 @@ model Admin {
   department  Department? @relation(fields: [departmentId], references: [id])
 
   member_documents MemberDocument[] @relation("UploadedByAdmin")
+  notifications   Notification[]
   
   @@map("admins")
 }
@@ -1434,4 +1436,28 @@ model AuditLog {
   details   String?  @db.NVarChar(Max)
 
   @@map("audit_logs")
+}
+
+// Notification model for member/admin in-app notifications
+model Notification {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.NVarChar(255)
+  message     String?  @db.NVarChar(Max)
+  type        String   @db.NVarChar(50) // e.g., payment, safety, maintenance
+  severity    String?  @db.NVarChar(20) // e.g., info, warning, critical
+  isRead      Boolean  @default(false)
+  targetRole  String   @db.NVarChar(20) // member, admin, both
+  link        String?  @db.NVarChar(500) // optional URL/path to open when clicked
+
+  userId      String?
+  adminId     String?
+
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+
+  // Relations
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  admin       Admin?   @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }
