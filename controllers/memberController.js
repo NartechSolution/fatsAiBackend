@@ -502,6 +502,50 @@ exports.updateMemberStatus = async (req, res) => {
     const adminId = req.admin?.adminId || 'system';
     logActivity('Member Status Updated', adminId, member.email, 'Success', `Member ${member.email} status updated to ${status}`);
 
+    // Send notification email to member about status change (non-blocking)
+    (async () => {
+      try {
+        const memberDisplayName =
+          `${member.firstName || ''} ${member.lastName || ''}`.trim() ||
+          member.company_name_eng ||
+          member.username ||
+          'Member';
+
+        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+        const paymentStatusLabel = paymentStatus
+          ? paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)
+          : null;
+
+        const lines = [
+          `<p>Dear ${memberDisplayName},</p>`,
+          `<p>Your membership status has been updated to <strong>${statusLabel}</strong>.</p>`
+        ];
+
+        if (paymentStatusLabel) {
+          lines.push(
+            `<p>Your payment status is now: <strong>${paymentStatusLabel}</strong>.</p>`
+          );
+        }
+
+        lines.push(
+          '<p>If you have any questions, please contact support.</p>',
+          '<p>Best regards,<br/>Support Team</p>'
+        );
+
+        await sendMultipleEmails({
+          emailData: [
+            {
+              toEmail: member.email,
+              subject: 'Your membership status has been updated',
+              htmlContent: lines.join('')
+            }
+          ]
+        });
+      } catch (notifyError) {
+        console.error('Failed to send member status update email:', notifyError);
+      }
+    })();
+
     res.status(200).json({
       success: true,
       message: 'Member status updated successfully'
