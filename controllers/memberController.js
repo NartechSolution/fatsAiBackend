@@ -5,6 +5,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { logActivity } = require('../utils/auditLogger');
 const { getDocumentUrl } = require('../utils/uploadUtils');
+const { sendMultipleEmails } = require('../utils/emailUtils');
 
 // JWT configuration (keep in sync with authController)
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -859,6 +860,56 @@ exports.uploadPaymentSlipe = async (req, res) => {
       'Success',
       `Payment slip uploaded for member ${updatedMember.email}`
     );
+
+    // Send email notifications to member and admin (non-blocking for main flow)
+    (async () => {
+      try {
+        const adminNotificationEmail =
+          process.env.ADMIN_EMAIL || process.env.DEMO_EMAIL_TO || 'info@gstsa1.org';
+
+        const memberDisplayName =
+          `${updatedMember.firstName || ''} ${updatedMember.lastName || ''}`.trim() ||
+          updatedMember.company_name_eng ||
+          updatedMember.username ||
+          'Member';
+
+        const emailPayload = {
+          emailData: [
+            {
+              toEmail: updatedMember.email,
+              subject: 'Your payment slip has been received',
+              htmlContent: `
+                <p>Dear ${memberDisplayName},</p>
+                <p>Your payment slip has been uploaded successfully and has been sent to our team for review.</p>
+                <p>We will notify you once your payment has been verified.</p>
+                <p>Best regards,<br/>Support Team</p>
+              `
+            },
+            {
+              toEmail: adminNotificationEmail,
+              subject: 'New member payment slip uploaded',
+              htmlContent: `
+                <p>A member has uploaded a new payment slip.</p>
+                <ul>
+                  <li>User ID: ${updatedMember.id}</li>
+                  <li>Email: ${updatedMember.email}</li>
+                  <li>Company: ${
+                    updatedMember.company_name_eng ||
+                    updatedMember.company_name_arabic ||
+                    'N/A'
+                  }</li>
+                </ul>
+                <p>Please log in to the admin panel to review and process this payment.</p>
+              `
+            }
+          ]
+        };
+
+        await sendMultipleEmails(emailPayload);
+      } catch (notifyError) {
+        console.error('Failed to send payment slip notification emails:', notifyError);
+      }
+    })();
 
     return res.status(200).json({
       success: true,
