@@ -501,9 +501,15 @@ exports.updateMemberStatus = async (req, res) => {
 
     // Log activity
     const adminId = req.admin?.adminId || 'system';
-    logActivity('Member Status Updated', adminId, member.email, 'Success', `Member ${member.email} status updated to ${status}`);
+    logActivity(
+      'Member Status Updated',
+      adminId,
+      member.email,
+      'Success',
+      `Member ${member.email} status updated to ${status}`
+    );
 
-    // Send notification email to member about status change (non-blocking)
+    // Send email + in-app notification about status / payment change (non-blocking)
     (async () => {
       try {
         const memberDisplayName =
@@ -542,8 +548,51 @@ exports.updateMemberStatus = async (req, res) => {
             }
           ]
         });
+
+        // Create in-app notifications related to status / payment change
+        const notifications = [];
+
+        // Member notification about status/payment change
+        const baseMessage = paymentStatusLabel
+          ? `Your membership is now ${statusLabel} and payment status is ${paymentStatusLabel}.`
+          : `Your membership is now ${statusLabel}.`;
+
+        let severity = 'info';
+        if (status === 'active') severity = 'success';
+        else if (status === 'inactive') severity = 'warning';
+
+        notifications.push({
+          title: 'Membership status updated',
+          message: baseMessage,
+          type: 'membership',
+          severity,
+          targetRole: 'member',
+          userId: member.id,
+          link: '/member/profile' // adjust to your member profile/membership page
+        });
+
+        // Optional admin notification when payment marked as paid/failed
+        if (paymentStatus && ['paid', 'failed'].includes(paymentStatus)) {
+          const adminSeverity = paymentStatus === 'paid' ? 'success' : 'warning';
+          const adminTitle =
+            paymentStatus === 'paid'
+              ? 'Member payment marked as paid'
+              : 'Member payment update';
+
+          notifications.push({
+            title: adminTitle,
+            message: `Payment status for member ${member.email} is now ${paymentStatusLabel}.`,
+            type: 'payment',
+            severity: adminSeverity,
+            targetRole: 'admin',
+            adminId: null,
+            link: '/admin/members'
+          });
+        }
+
+        await notificationModel.createManyNotifications(notifications);
       } catch (notifyError) {
-        console.error('Failed to send member status update email:', notifyError);
+        console.error('Failed to send member status update notifications:', notifyError);
       }
     })();
 
