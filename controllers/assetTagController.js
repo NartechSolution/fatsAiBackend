@@ -1,24 +1,48 @@
 const prisma = require('../prisma/client');
 
 /**
- * Create a new asset tag
+ * Create new asset tag(s)
  * POST /api/asset-tags
+ *
+ * Accepts:
+ * - single serial: serial: "ABC123"
+ * - multiple serials: serial: ["ABC123", "DEF456"]
  */
 exports.createAssetTag = async (req, res) => {
   try {
     const { newassetId, serial } = req.body;
 
+    // Normalize serial(s) into an array for easier handling
+    const serialArray = Array.isArray(serial)
+      ? serial
+      : serial
+      ? [serial]
+      : [];
+
     // Validate required fields
-    if (!newassetId || !serial) {
+    if (!newassetId || serialArray.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'newassetId and serial are required'
+        message: 'newassetId and at least one serial are required'
+      });
+    }
+
+    // Clean and filter serials
+    const cleanedSerials = serialArray
+      .map((s) => (s != null ? String(s).trim() : ''))
+      .filter((s) => s.length > 0);
+
+    if (cleanedSerials.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Serial values cannot be empty'
       });
     }
 
     // Check if NewAsset exists
+    const newAssetIdInt = parseInt(newassetId);
     const newAsset = await prisma.newAsset.findUnique({
-      where: { id: parseInt(newassetId) }
+      where: { id: newAssetIdInt }
     });
 
     if (!newAsset) {
@@ -28,28 +52,56 @@ exports.createAssetTag = async (req, res) => {
       });
     }
 
-    // Create asset tag
-    const assetTag = await prisma.assetTag.create({
-      data: {
-        newassetId: parseInt(newassetId),
-        serial: serial.trim()
-      },
-      include: {
-        newAsset: {
-          select: {
-            id: true,
-            name: true,
-            serialNo: true,
-            status: true
+    // Create one or many asset tags
+    let created;
+    if (cleanedSerials.length === 1) {
+      created = await prisma.assetTag.create({
+        data: {
+          newassetId: newAssetIdInt,
+          serial: cleanedSerials[0]
+        },
+        include: {
+          newAsset: {
+            select: {
+              id: true,
+              name: true,
+              serialNo: true,
+              status: true
+            }
           }
         }
-      }
-    });
+      });
+    } else {
+      // Create multiple tags and return full records
+      created = await Promise.all(
+        cleanedSerials.map((s) =>
+          prisma.assetTag.create({
+            data: {
+              newassetId: newAssetIdInt,
+              serial: s
+            },
+            include: {
+              newAsset: {
+                select: {
+                  id: true,
+                  name: true,
+                  serialNo: true,
+                  status: true
+                }
+              }
+            }
+          })
+        )
+      );
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Asset tag created successfully',
-      data: assetTag
+      message:
+        cleanedSerials.length === 1
+          ? 'Asset tag created successfully'
+          : 'Asset tags created successfully',
+      data: created
     });
   } catch (error) {
     console.error('Error creating asset tag:', error);
