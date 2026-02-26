@@ -233,10 +233,14 @@ const newAssetTotalWhere = {
 
 /**
  * Helper function to get total assets with growth metrics (from NewAsset model)
+ * Optionally scoped to a specific userId (for member-specific dashboards).
  */
-const getTotalAssetsData = async () => {
+const getTotalAssetsData = async (userId) => {
   const totalAssets = await prisma.newAsset.count({
-    where: newAssetTotalWhere
+    where: {
+      ...newAssetTotalWhere,
+      ...(userId ? { userId } : {})
+    }
   });
 
   const previousMonthDate = new Date();
@@ -245,6 +249,7 @@ const getTotalAssetsData = async () => {
   const previousMonthTotalAssets = await prisma.newAsset.count({
     where: {
       ...newAssetTotalWhere,
+      ...(userId ? { userId } : {}),
       createdAt: {
         lt: previousMonthDate
       }
@@ -270,10 +275,11 @@ const getTotalAssetsData = async () => {
  * Helper function to get active assets (from NewAsset model).
  * Active = status is "active" (same as api/new-assets).
  */
-const getActiveAssetsData = async () => {
+const getActiveAssetsData = async (userId) => {
   const activeWhere = {
     ...newAssetTotalWhere,
-    status: "active"
+    status: "active",
+    ...(userId ? { userId } : {})
   };
 
   const activeAssets = await prisma.newAsset.count({
@@ -307,8 +313,9 @@ const getActiveAssetsData = async () => {
 
 /**
  * Helper function to get warning assets with new warnings this week (from NewAsset model)
+ * Optionally scoped to a specific userId.
  */
-const getWarningAssetsData = async () => {
+const getWarningAssetsData = async (userId) => {
   const conditions = await prisma.assetCondition.findMany({
     where: { status: true },
     select: { id: true, name: true }
@@ -320,8 +327,16 @@ const getWarningAssetsData = async () => {
   const warningConditionIds = [fairId, poorId, damagedId].filter(Boolean);
 
   const whereWarning = warningConditionIds.length
-    ? { ...newAssetTotalWhere, assetConditionId: { in: warningConditionIds } }
-    : { ...newAssetTotalWhere, assetConditionId: { in: [] } };
+    ? {
+        ...newAssetTotalWhere,
+        assetConditionId: { in: warningConditionIds },
+        ...(userId ? { userId } : {})
+      }
+    : {
+        ...newAssetTotalWhere,
+        assetConditionId: { in: [] },
+        ...(userId ? { userId } : {})
+      };
 
   const warningAssets = await prisma.newAsset.count({
     where: whereWarning
@@ -351,11 +366,12 @@ const getWarningAssetsData = async () => {
  * Helper function to get maintenance assets (from NewAsset model).
  * Under maintenance = status is "maintenance" (same as api/new-assets).
  */
-const getMaintenanceAssetsData = async () => {
+const getMaintenanceAssetsData = async (userId) => {
   const maintenanceAssets = await prisma.newAsset.count({
     where: {
       ...newAssetTotalWhere,
-      status: "maintenance"
+      status: "maintenance",
+      ...(userId ? { userId } : {})
     }
   });
 
@@ -366,7 +382,14 @@ const getMaintenanceAssetsData = async () => {
 
   const scheduledToday = await prisma.logMaintenance.count({
     where: {
-      startDate: { gte: todayStart, lt: todayEnd }
+      startDate: { gte: todayStart, lt: todayEnd },
+      ...(userId
+        ? {
+            maintenance: {
+              userId
+            }
+          }
+        : {})
     }
   });
 
@@ -396,11 +419,12 @@ const getIotDevicesData = async () => {
  * Helper function to get new assets count (from NewAsset model).
  * "New asset" = tagNumber is null = no tag assigned (untagged).
  */
-const getNewAssetsData = async () => {
+const getNewAssetsData = async (userId) => {
   const newAssetsCount = await prisma.newAsset.count({
     where: {
       ...newAssetTotalWhere,
-      assetTags: { none: {} }
+      assetTags: { none: {} },
+      ...(userId ? { userId } : {})
     }
   });
 
@@ -556,14 +580,17 @@ const getBrandVendorStats = async () => {
  */
 exports.getDashboardStats = async (req, res) => {
   try {
+    // Derive the current user's ID from the verified JWT (supports both userId and id keys)
+    const userId = req.user && (req.user.userId || req.user.id);
+
     // Get data for all dashboard cards using helper functions (including new assets - no tag assigned)
     const [totalAssetsData, activeAssetsData, warningAssetsData, maintenanceAssetsData, iotDevicesData, newAssetsData] = await Promise.all([
-      getTotalAssetsData(),
-      getActiveAssetsData(),
-      getWarningAssetsData(),
-      getMaintenanceAssetsData(),
+      getTotalAssetsData(userId),
+      getActiveAssetsData(userId),
+      getWarningAssetsData(userId),
+      getMaintenanceAssetsData(userId),
       getIotDevicesData(),
-      getNewAssetsData()
+      getNewAssetsData(userId)
     ]);
     
     res.status(200).json({
