@@ -404,11 +404,30 @@ const getMaintenanceAssetsData = async (userId) => {
 };
 
 /**
- * Helper function to get IoT devices count
+ * Helper function to get IoT devices count.
+ * If userId is provided, counts only IoT devices that are linked (via IotDeviceAsset -> Maintenance)
+ * to maintenance records created by that user. Otherwise, returns the global count.
  */
-const getIotDevicesData = async () => {
-  // Get total IoT devices count
-  const iotDevices = await prisma.iotDevice.count();
+const getIotDevicesData = async (userId) => {
+  let where = {};
+
+  if (userId) {
+    where = {
+      iotDeviceAssets: {
+        some: {
+          maintenances: {
+            some: {
+              userId
+            }
+          }
+        }
+      }
+    };
+  }
+
+  const iotDevices = await prisma.iotDevice.count({
+    where
+  });
   
   return {
     count: iotDevices
@@ -589,7 +608,7 @@ exports.getDashboardStats = async (req, res) => {
       getActiveAssetsData(userId),
       getWarningAssetsData(userId),
       getMaintenanceAssetsData(userId),
-      getIotDevicesData(),
+      getIotDevicesData(userId),
       getNewAssetsData(userId)
     ]);
     
