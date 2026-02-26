@@ -457,17 +457,53 @@ const getNewAssetsData = async (userId) => {
  * - Total departments
  * - Active departments
  * - Inactive departments
+ * If userId is provided, only departments that have NewAssets for that user are counted.
  */
-const getDepartmentStats = async () => {
+const getDepartmentStats = async (userId) => {
+  // Global stats (no user scoping)
+  if (!userId) {
+    const [totalDepartments, activeDepartments, inactiveDepartments] = await Promise.all([
+      prisma.department.count(),
+      prisma.department.count({
+        where: {
+          status: { in: ['active', 'Active'] }
+        }
+      }),
+      prisma.department.count({
+        where: {
+          status: { in: ['inactive', 'Inactive'] }
+        }
+      })
+    ]);
+
+    return {
+      total: totalDepartments,
+      active: activeDepartments,
+      inactive: inactiveDepartments
+    };
+  }
+
+  // Scoped stats: only departments that have at least one NewAsset for this user
+  const baseWhere = {
+    newAssets: {
+      some: {
+        ...newAssetTotalWhere,
+        userId
+      }
+    }
+  };
+
   const [totalDepartments, activeDepartments, inactiveDepartments] = await Promise.all([
-    prisma.department.count(),
+    prisma.department.count({ where: baseWhere }),
     prisma.department.count({
       where: {
+        ...baseWhere,
         status: { in: ['active', 'Active'] }
       }
     }),
     prisma.department.count({
       where: {
+        ...baseWhere,
         status: { in: ['inactive', 'Inactive'] }
       }
     })
@@ -485,13 +521,46 @@ const getDepartmentStats = async () => {
  * - Total asset categories
  * - Total subcategories
  * - Total asset items (from NewAsset model)
+ * If userId is provided, asset categories and items are scoped to that user's assets.
  */
-const getAssetCategoryStats = async () => {
+const getAssetCategoryStats = async (userId) => {
+  // Global stats (no user scoping)
+  if (!userId) {
+    const [categoryCount, subCategoryCount, assetItemCount] = await Promise.all([
+      prisma.assetCategory.count(),
+      prisma.subCategory.count(),
+      prisma.newAsset.count({
+        where: newAssetTotalWhere
+      })
+    ]);
+
+    return {
+      categories: categoryCount,
+      subCategories: subCategoryCount,
+      items: assetItemCount
+    };
+  }
+
   const [categoryCount, subCategoryCount, assetItemCount] = await Promise.all([
-    prisma.assetCategory.count(),
+    // Categories that have at least one NewAsset for this user
+    prisma.assetCategory.count({
+      where: {
+        newAssets: {
+          some: {
+            ...newAssetTotalWhere,
+            userId
+          }
+        }
+      }
+    }),
+    // Subcategories are system-wide definitions; keep global
     prisma.subCategory.count(),
+    // Total NewAsset items for this user
     prisma.newAsset.count({
-      where: newAssetTotalWhere
+      where: {
+        ...newAssetTotalWhere,
+        userId
+      }
     })
   ]);
 
@@ -507,17 +576,53 @@ const getAssetCategoryStats = async () => {
  * - Total employees
  * - Active employees
  * - Employees on leave
+ * If userId is provided, only employees linked to that user's assets are counted.
  */
-const getEmployeeStats = async () => {
+const getEmployeeStats = async (userId) => {
+  // Global stats (no user scoping)
+  if (!userId) {
+    const [totalEmployees, activeEmployees, onLeaveEmployees] = await Promise.all([
+      prisma.employeeList.count(),
+      prisma.employeeList.count({
+        where: {
+          status: { in: ['active', 'Active'] }
+        }
+      }),
+      prisma.employeeList.count({
+        where: {
+          status: { in: ['on_leave', 'On Leave', 'on leave'] }
+        }
+      })
+    ]);
+
+    return {
+      total: totalEmployees,
+      active: activeEmployees,
+      onLeave: onLeaveEmployees
+    };
+  }
+
+  // Scoped stats: only employees that are linked to NewAssets for this user
+  const baseWhere = {
+    newAssets: {
+      some: {
+        ...newAssetTotalWhere,
+        userId
+      }
+    }
+  };
+
   const [totalEmployees, activeEmployees, onLeaveEmployees] = await Promise.all([
-    prisma.employeeList.count(),
+    prisma.employeeList.count({ where: baseWhere }),
     prisma.employeeList.count({
       where: {
+        ...baseWhere,
         status: { in: ['active', 'Active'] }
       }
     }),
     prisma.employeeList.count({
       where: {
+        ...baseWhere,
         status: { in: ['on_leave', 'On Leave', 'on leave'] }
       }
     })
@@ -535,6 +640,7 @@ const getEmployeeStats = async () => {
  * - Total roles
  * - Total permissions
  * - Total custom role-permission assignments
+ * (These are system-wide configuration values, so they are not scoped per user.)
  */
 const getRolePermissionStats = async () => {
   const [roleCount, permissionCount, customAssignments] = await Promise.all([
@@ -555,12 +661,52 @@ const getRolePermissionStats = async () => {
  * - Total cities
  * - Total locations
  * - Total warehouses (using ManageLocation as warehouse-like entities)
+ * If userId is provided, only entities associated with that user are counted.
  */
-const getCityLocationStats = async () => {
+const getCityLocationStats = async (userId) => {
+  // Global stats (no user scoping)
+  if (!userId) {
+    const [cityCount, locationCount, warehouseCount] = await Promise.all([
+      prisma.city.count(),
+      prisma.location.count(),
+      prisma.manageLocation.count()
+    ]);
+
+    return {
+      cities: cityCount,
+      locations: locationCount,
+      warehouses: warehouseCount
+    };
+  }
+
   const [cityCount, locationCount, warehouseCount] = await Promise.all([
-    prisma.city.count(),
-    prisma.location.count(),
-    prisma.manageLocation.count()
+    // Cities that have NewAssets for this user
+    prisma.city.count({
+      where: {
+        newAssets: {
+          some: {
+            ...newAssetTotalWhere,
+            userId
+          }
+        }
+      }
+    }),
+    // Locations that have ManageLocations created by this user
+    prisma.location.count({
+      where: {
+        manageLocations: {
+          some: {
+            userId
+          }
+        }
+      }
+    }),
+    // Warehouses (ManageLocations) owned by this user
+    prisma.manageLocation.count({
+      where: {
+        userId
+      }
+    })
   ]);
 
   return {
@@ -575,10 +721,37 @@ const getCityLocationStats = async () => {
  * - Total vendors (using AssetBrand as vendor-like entities)
  * - Total brands
  * - Total contracts (placeholder, adjust when contract model is available)
+ * If userId is provided, vendors are scoped to brands used by that user's assets;
+ * brands remain global configuration.
  */
-const getBrandVendorStats = async () => {
+const getBrandVendorStats = async (userId) => {
+  // Global stats (no user scoping)
+  if (!userId) {
+    const [vendorCount, brandCount] = await Promise.all([
+      prisma.assetBrand.count(),
+      prisma.brand.count()
+    ]);
+
+    return {
+      vendors: vendorCount,
+      brands: brandCount,
+      contracts: 0
+    };
+  }
+
   const [vendorCount, brandCount] = await Promise.all([
-    prisma.assetBrand.count(),
+    // Asset brands that have NewAssets for this user
+    prisma.assetBrand.count({
+      where: {
+        newAssets: {
+          some: {
+            ...newAssetTotalWhere,
+            userId
+          }
+        }
+      }
+    }),
+    // Brands remain system-wide
     prisma.brand.count()
   ]);
 
@@ -637,6 +810,9 @@ exports.getDashboardStats = async (req, res) => {
  */
 exports.getAdminDashboardStats = async (req, res) => {
   try {
+    // Derive the current user's ID from the verified JWT (supports both userId and id keys)
+    const userId = req.user && (req.user.userId || req.user.id);
+
     const [
       departmentStats,
       assetCategoryStats,
@@ -645,12 +821,12 @@ exports.getAdminDashboardStats = async (req, res) => {
       cityLocationStats,
       brandVendorStats
     ] = await Promise.all([
-      getDepartmentStats(),
-      getAssetCategoryStats(),
-      getEmployeeStats(),
+      getDepartmentStats(userId),
+      getAssetCategoryStats(userId),
+      getEmployeeStats(userId),
       getRolePermissionStats(),
-      getCityLocationStats(),
-      getBrandVendorStats()
+      getCityLocationStats(userId),
+      getBrandVendorStats(userId)
     ]);
 
     res.status(200).json({
