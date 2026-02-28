@@ -22,7 +22,23 @@ const newAssetInclude = {
 // Middleware for handling file uploads (image field)
 exports.uploadNewAssetImage = upload.single('image');
 
-// Create a new NewAsset
+/**
+ * Given a serial number string (e.g. "SN232332"), return the next one by incrementing the trailing numeric part.
+ * Examples: "SN232332" -> "SN232333"; "ABC99" -> "ABC100". If no trailing digits, appends "1", "2", etc.
+ */
+function getNextSerialNo(serialNo) {
+  if (!serialNo || typeof serialNo !== 'string') return 'SN1';
+  const s = String(serialNo).trim();
+  const match = s.match(/^(.*?)(\d+)$/);
+  if (match) {
+    const prefix = match[1];
+    const num = parseInt(match[2], 10);
+    return `${prefix}${num + 1}`;
+  }
+  return `${s}1`;
+}
+
+// Create a new NewAsset (or multiple when quantity > 1, with incrementing serial numbers)
 exports.createNewAsset = async (req, res) => {
   try {
     const user = req.user || req.admin || {};
@@ -57,6 +73,9 @@ exports.createNewAsset = async (req, res) => {
       buidlingNumber,
     } = req.body;
 
+    // Number of assets to create (same data, incrementing serial numbers). Default 1.
+    const quantityCount = Math.max(1, parseInt(quantity, 10) || 1);
+
     // Auto-generate serial number if not provided or empty
     let finalSerialNo = serialNo;
     if (
@@ -67,6 +86,14 @@ exports.createNewAsset = async (req, res) => {
       // Generate SN followed by 8 random digits, e.g. SN10111012
       const randomPart = Math.floor(10000000 + Math.random() * 90000000);
       finalSerialNo = `SN${randomPart}`;
+    }
+
+    // Build list of serial numbers: first = finalSerialNo, then increment for each additional asset
+    const serialNumbers = [];
+    let currentSerial = finalSerialNo;
+    for (let i = 0; i < quantityCount; i++) {
+      serialNumbers.push(currentSerial);
+      currentSerial = getNextSerialNo(currentSerial);
     }
 
     // Check related records only when IDs are provided
@@ -215,48 +242,58 @@ exports.createNewAsset = async (req, res) => {
     const connectFloor = floorId != null && floorId !== '' ? { connect: { id: parseInt(floorId, 10) } } : undefined;
     const connectUser = finalUserId ? { connect: { id: finalUserId } } : undefined;
 
-    // Create asset using relation connect syntax for SQL Server compatibility
-    const newAsset = await prisma.newAsset.create({
-      data: {
-        name: name || null,
-        serialNo: finalSerialNo || null,
-        status: status || null,
-        description: description || null,
-        image: imagePath,
-        purchaseDate: parsedPurchaseDate,
-        warrantyExpiry: parsedWarrantyExpiry,
-        ...(connectAssetCategory && { assetCategory: connectAssetCategory }),
-        ...(connectDepartment && { department: connectDepartment }),
-        ...(connectEmployee && { employee: connectEmployee }),
-        ...(connectAssetCondition && { assetCondition: connectAssetCondition }),
-        ...(connectLocation && { location: connectLocation }),
-        ...(connectUser && { user: connectUser }),
-        ...(connectCountry && { country: connectCountry }),
-        ...(connectState && { state: connectState }),
-        ...(connectAssetBrand && { assetBrand: connectAssetBrand }),
-        ...(connectBuilding && { building: connectBuilding }),
-        ...(connectFloor && { floor: connectFloor }),
-        ...(brandModel !== undefined ? { brandModel: brandModel || null } : {}),
-        ...(quantity !== undefined ? { quantity: quantity === '' || quantity == null ? null : parseInt(quantity, 10) } : {}),
-        ...(zoneArea !== undefined ? { zoneArea: zoneArea || null } : {}),
-        ...(DeptCode !== undefined ? { DeptCode: DeptCode || null } : {}),
-        ...(bussinessUnit !== undefined ? { bussinessUnit: bussinessUnit || null } : {}),
-        ...(buildingName !== undefined ? { buildingName: buildingName || null } : {}),
-        ...(buildingAddress !== undefined ? { buildingAddress: buildingAddress || null } : {}),
-        ...(buidlingNumber !== undefined ? { buidlingNumber: buidlingNumber || null } : {}),
-      },
-    });
+    // When creating multiple assets (quantity > 1), each record is one unit so store quantity as 1 per asset
+    const quantityForRecord = quantityCount > 1 ? 1 : (quantity === undefined ? undefined : (quantity === '' || quantity == null ? null : parseInt(quantity, 10)));
 
-    // Fetch with relations
-    const newAssetWithRelations = await prisma.newAsset.findUnique({
-      where: { id: newAsset.id },
+    const createdAssets = [];
+    for (let i = 0; i < quantityCount; i++) {
+      const newAsset = await prisma.newAsset.create({
+        data: {
+          name: name || null,
+          serialNo: serialNumbers[i] || null,
+          status: status || null,
+          description: description || null,
+          image: imagePath,
+          purchaseDate: parsedPurchaseDate,
+          warrantyExpiry: parsedWarrantyExpiry,
+          ...(connectAssetCategory && { assetCategory: connectAssetCategory }),
+          ...(connectDepartment && { department: connectDepartment }),
+          ...(connectEmployee && { employee: connectEmployee }),
+          ...(connectAssetCondition && { assetCondition: connectAssetCondition }),
+          ...(connectLocation && { location: connectLocation }),
+          ...(connectUser && { user: connectUser }),
+          ...(connectCountry && { country: connectCountry }),
+          ...(connectState && { state: connectState }),
+          ...(connectAssetBrand && { assetBrand: connectAssetBrand }),
+          ...(connectBuilding && { building: connectBuilding }),
+          ...(connectFloor && { floor: connectFloor }),
+          ...(brandModel !== undefined ? { brandModel: brandModel || null } : {}),
+          ...(quantityForRecord !== undefined ? { quantity: quantityForRecord } : {}),
+          ...(zoneArea !== undefined ? { zoneArea: zoneArea || null } : {}),
+          ...(DeptCode !== undefined ? { DeptCode: DeptCode || null } : {}),
+          ...(bussinessUnit !== undefined ? { bussinessUnit: bussinessUnit || null } : {}),
+          ...(buildingName !== undefined ? { buildingName: buildingName || null } : {}),
+          ...(buildingAddress !== undefined ? { buildingAddress: buildingAddress || null } : {}),
+          ...(buidlingNumber !== undefined ? { buidlingNumber: buidlingNumber || null } : {}),
+        },
+      });
+      createdAssets.push(newAsset);
+    }
+
+    // Fetch all created assets with relations for response
+    const newAssetsWithRelations = await prisma.newAsset.findMany({
+      where: { id: { in: createdAssets.map((a) => a.id) } },
       include: newAssetInclude,
+      orderBy: { id: 'asc' },
     });
 
     res.status(201).json({
       success: true,
-      message: 'New asset created successfully',
-      data: newAssetWithRelations,
+      message: quantityCount > 1
+        ? `${quantityCount} new assets created successfully`
+        : 'New asset created successfully',
+      count: quantityCount,
+      data: newAssetsWithRelations,
     });
   } catch (error) {
     console.error('Error creating new asset:', error);
