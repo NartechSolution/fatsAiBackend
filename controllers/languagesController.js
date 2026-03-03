@@ -1,6 +1,7 @@
 const Languages = require('../models/languages');
 const createError = require('../utils/createError');
 const prisma = require('../prisma/client');
+const ExcelJS = require('exceljs');
 
 // Get all translations as a key-value object
 exports.translations = async (req, res, next) => {
@@ -16,6 +17,131 @@ exports.translations = async (req, res, next) => {
     });
 
     res.json(formattedData);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Export translations to a formatted Excel file
+exports.exportTranslationsToExcel = async (req, res, next) => {
+  try {
+    const allLanguages = await prisma.languages.findMany({
+      orderBy: { key: 'asc' }
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Translations');
+
+    worksheet.columns = [
+      { header: 'key', key: 'key', width: 40 },
+      { header: 'value', key: 'value', width: 60 }
+    ];
+
+    allLanguages.forEach((item) => {
+      worksheet.addRow({
+        key: item.key,
+        value: item.value
+      });
+    });
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="translations-template.xlsx"'
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Import translations from an Excel file
+exports.importTranslationsFromExcel = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return next(createError(400, 'Excel file is required'));
+    }
+
+    const filePath = req.file.path;
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(filePath);
+
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      return next(createError(400, 'Excel file is empty or invalid'));
+    }
+
+    // Expect headers in first row: key, value
+    const headerRow = worksheet.getRow(1);
+    const keyColIndex = headerRow.values.findIndex(
+      (v) => v && v.toString().trim().toLowerCase() === 'key'
+    );
+    const valueColIndex = headerRow.values.findIndex(
+      (v) => v && v.toString().trim().toLowerCase() === 'value'
+    );
+
+    if (keyColIndex === -1 || valueColIndex === -1) {
+      return next(
+        createError(
+          400,
+          "Invalid header format. Required columns: 'key', 'value' in the first row."
+        )
+      );
+    }
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    // Start from row 2 (after header)
+    for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
+      const row = worksheet.getRow(rowNumber);
+      const key = row.getCell(keyColIndex).value
+        ? row.getCell(keyColIndex).value.toString().trim()
+        : '';
+      const value = row.getCell(valueColIndex).value
+        ? row.getCell(valueColIndex).value.toString().trim()
+        : '';
+
+      if (!key || !value) {
+        skippedCount++;
+        continue;
+      }
+
+      // Upsert by key
+      const existing = await prisma.languages.findUnique({
+        where: { key }
+      });
+
+      if (existing) {
+        await prisma.languages.update({
+          where: { id: existing.id },
+          data: { value }
+        });
+        updatedCount++;
+      } else {
+        await prisma.languages.create({
+          data: { key, value }
+        });
+        createdCount++;
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Translations imported successfully',
+      summary: {
+        created: createdCount,
+        updated: updatedCount,
+        skipped: skippedCount
+      }
+    });
   } catch (error) {
     next(error);
   }
