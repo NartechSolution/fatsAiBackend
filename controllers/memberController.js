@@ -194,21 +194,12 @@ exports.getMembersSummary = async (req, res) => {
     // Get total members count
     const totalMembers = await prisma.user.count();
 
-    // SQL Server Prisma: `distinct` is not supported in `.count()`.
-    // So we count USERS via relation filters instead.
-    const activeMembers = await prisma.user.count({
-      where: { user_subscriptions: { some: { status: 'active' } } }
-    });
-
-    const pendingMembers = await prisma.user.count({
-      where: { user_subscriptions: { some: { status: 'pending' } } }
-    });
-
+    // Users with at least one inactive subscription
     const inactiveSubscriptions = await prisma.user.count({
       where: { user_subscriptions: { some: { status: 'inactive' } } }
     });
 
-    // Count users without any subscription
+    // Users without any subscription
     const usersWithoutSubscription = await prisma.user.count({
       where: {
         user_subscriptions: {
@@ -217,7 +208,26 @@ exports.getMembersSummary = async (req, res) => {
       }
     });
 
+    // Final inactive members bucket:
+    // - users with any inactive subscription
+    // - OR users with no subscriptions at all
     const inactiveMembers = inactiveSubscriptions + usersWithoutSubscription;
+
+    // Pending members:
+    // - have at least one subscription with paymentStatus = 'pending'
+    // - are NOT already classified as inactive (no inactive subscriptions)
+    const pendingMembers = await prisma.user.count({
+      where: {
+        user_subscriptions: {
+          some: { paymentStatus: 'pending' },
+          none: { status: 'inactive' }
+        }
+      }
+    });
+
+    // Active members:
+    // everything else that is not inactive or pending
+    const activeMembers = totalMembers - inactiveMembers - pendingMembers;
 
     res.status(200).json({
       success: true,
