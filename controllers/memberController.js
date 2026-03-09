@@ -462,10 +462,10 @@ exports.updateMemberStatus = async (req, res) => {
     const { id } = req.params;
     const { status, paymentStatus } = req.body;
 
-    if (!status || !['active', 'pending', 'inactive'].includes(status)) {
+    if (!status || !['active', 'rejected', 'inactive'].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Valid status is required (active, pending, inactive)'
+        message: 'Valid status is required (active, rejected, inactive)'
       });
     }
 
