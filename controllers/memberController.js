@@ -208,15 +208,9 @@ exports.getMembersSummary = async (req, res) => {
       }
     });
 
-    // Final inactive members bucket:
-    // - users with any inactive subscription
-    // - OR users with no subscriptions at all
-    const inactiveMembers = inactiveSubscriptions + usersWithoutSubscription;
-
-    // Pending members:
-    // - have at least one subscription with paymentStatus = 'pending'
-    // - are NOT already classified as inactive (no inactive subscriptions)
-    const pendingMembers = await prisma.user.count({
+    // Users with at least one pending payment and no inactive subscription
+    // These are now also treated as "inactive" for summary purposes.
+    const pendingAsInactive = await prisma.user.count({
       where: {
         user_subscriptions: {
           some: { paymentStatus: 'pending' },
@@ -225,17 +219,32 @@ exports.getMembersSummary = async (req, res) => {
       }
     });
 
-    // Active members:
-    // everything else that is not inactive or pending
-    const activeMembers = totalMembers - inactiveMembers - pendingMembers;
+    // Users whose subscription status is explicitly rejected
+    const rejectedMembers = await prisma.user.count({
+      where: {
+        user_subscriptions: {
+          some: { status: 'rejected' }
+        }
+      }
+    });
+
+    // Final inactive members bucket:
+    // - users with any inactive subscription
+    // - OR users with no subscriptions at all
+    // - OR users whose paymentStatus is pending (no inactive subscription)
+    const inactiveMembers =
+      inactiveSubscriptions + usersWithoutSubscription + pendingAsInactive;
+
+    // Active members: everything else that is not in the inactive bucket
+    const activeMembers = totalMembers - inactiveMembers;
 
     res.status(200).json({
       success: true,
       data: {
         totalMembers,
         activeMembers,
-        pendingMembers,
-        inactiveMembers
+        inactiveMembers,
+        rejectedMembers
       }
     });
   } catch (error) {
