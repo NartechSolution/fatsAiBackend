@@ -314,10 +314,12 @@ exports.createUser = async (req, res, next) => {
           data: {
             userId: newUser.id,
             planId: plan_id,
-            status: 'active',
+            // New members should start with an inactive subscription
+            // and a pending payment status by default.
+            status: 'inactive',
             startedAt: currentDate,
             expiresAt: expiryDate,
-            paymentStatus: isFreeplan ? 'paid' : 'pending',
+            paymentStatus: 'pending',
             amountPaid: amount_paid,
             paymentMethod: isFreeplan ? 'free' : payment_method,
             transactionId: transactionId,
