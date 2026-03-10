@@ -471,12 +471,41 @@ exports.updateMemberStatus = async (req, res) => {
     const { id } = req.params;
     const { status, paymentStatus } = req.body;
 
-    if (!status || !['active', 'rejected', 'inactive'].includes(status)) {
+    const normalizedStatus = typeof status === 'string' ? status.toLowerCase().trim() : undefined;
+    const normalizedPaymentStatus =
+      typeof paymentStatus === 'string' ? paymentStatus.toLowerCase().trim() : undefined;
+
+    const statusProvided = normalizedStatus !== undefined && normalizedStatus !== '';
+    const paymentProvided =
+      normalizedPaymentStatus !== undefined && normalizedPaymentStatus !== '';
+
+    if (!statusProvided && !paymentProvided) {
+      return res.status(400).json({
+        success: false,
+        message: 'Provide at least one of: status or paymentStatus'
+      });
+    }
+
+    if (statusProvided && !['active', 'rejected', 'inactive'].includes(normalizedStatus)) {
       return res.status(400).json({
         success: false,
         message: 'Valid status is required (active, rejected, inactive)'
       });
     }
+
+    if (
+      paymentProvided &&
+      !['pending', 'paid', 'failed'].includes(normalizedPaymentStatus)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid paymentStatus is required (pending, paid, failed)'
+      });
+    }
+
+    // Business rule: marking payment as paid automatically activates membership
+    const effectiveStatus =
+      normalizedPaymentStatus === 'paid' ? 'active' : normalizedStatus;
 
     // Check if member exists
     const member = await prisma.user.findUnique({
@@ -501,11 +530,10 @@ exports.updateMemberStatus = async (req, res) => {
     // Update the most recent subscription
     if (member.user_subscriptions.length > 0) {
       const subscriptionId = member.user_subscriptions[0].id;
-      const updateData = { status };
+      const updateData = {};
+      if (effectiveStatus) updateData.status = effectiveStatus;
       
-      if (paymentStatus && ['pending', 'paid', 'failed'].includes(paymentStatus)) {
-        updateData.paymentStatus = paymentStatus;
-      }
+      if (paymentProvided) updateData.paymentStatus = normalizedPaymentStatus;
 
       await prisma.userSubscription.update({
         where: { id: subscriptionId },
@@ -525,7 +553,7 @@ exports.updateMemberStatus = async (req, res) => {
       adminId,
       member.email,
       'Success',
-      `Member ${member.email} status updated to ${status}`
+      `Member ${member.email} status updated to ${effectiveStatus || member.user_subscriptions[0]?.status || 'unchanged'}`
     );
 
     // Send email + in-app notification about status / payment change (non-blocking)
@@ -537,14 +565,18 @@ exports.updateMemberStatus = async (req, res) => {
           member.username ||
           'Member';
 
-        const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-        const paymentStatusLabel = paymentStatus
-          ? paymentStatus.charAt(0).toUpperCase() + paymentStatus.slice(1)
+        const statusLabel = effectiveStatus
+          ? effectiveStatus.charAt(0).toUpperCase() + effectiveStatus.slice(1)
+          : null;
+        const paymentStatusLabel = normalizedPaymentStatus
+          ? normalizedPaymentStatus.charAt(0).toUpperCase() + normalizedPaymentStatus.slice(1)
           : null;
 
         const lines = [
           `<p>Dear ${memberDisplayName},</p>`,
-          `<p>Your membership status has been updated to <strong>${statusLabel}</strong>.</p>`
+          statusLabel
+            ? `<p>Your membership status has been updated to <strong>${statusLabel}</strong>.</p>`
+            : `<p>Your membership details have been updated.</p>`
         ];
 
         if (paymentStatusLabel) {
@@ -572,13 +604,18 @@ exports.updateMemberStatus = async (req, res) => {
         const notifications = [];
 
         // Member notification about status/payment change
-        const baseMessage = paymentStatusLabel
-          ? `Your membership is now ${statusLabel} and payment status is ${paymentStatusLabel}.`
-          : `Your membership is now ${statusLabel}.`;
+        const baseMessage =
+          statusLabel && paymentStatusLabel
+            ? `Your membership is now ${statusLabel} and payment status is ${paymentStatusLabel}.`
+            : statusLabel
+              ? `Your membership is now ${statusLabel}.`
+              : paymentStatusLabel
+                ? `Your payment status is now ${paymentStatusLabel}.`
+                : 'Your membership details have been updated.';
 
         let severity = 'info';
-        if (status === 'active') severity = 'success';
-        else if (status === 'inactive') severity = 'warning';
+        if (effectiveStatus === 'active') severity = 'success';
+        else if (effectiveStatus === 'inactive') severity = 'warning';
 
         notifications.push({
           title: 'Membership status updated',
@@ -591,10 +628,10 @@ exports.updateMemberStatus = async (req, res) => {
         });
 
         // Optional admin notification when payment marked as paid/failed
-        if (paymentStatus && ['paid', 'failed'].includes(paymentStatus)) {
-          const adminSeverity = paymentStatus === 'paid' ? 'success' : 'warning';
+        if (paymentProvided && ['paid', 'failed'].includes(normalizedPaymentStatus)) {
+          const adminSeverity = normalizedPaymentStatus === 'paid' ? 'success' : 'warning';
           const adminTitle =
-            paymentStatus === 'paid'
+            normalizedPaymentStatus === 'paid'
               ? 'Member payment marked as paid'
               : 'Member payment update';
 
