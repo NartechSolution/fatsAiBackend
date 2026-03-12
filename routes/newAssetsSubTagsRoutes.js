@@ -14,6 +14,13 @@ router.post(
 // Get all sub assets (optionally filter by ?newassetId=)
 router.get('/', verifyToken, newAssetsSubTagsController.getAllNewAssetsSubTags);
 
+// Get all sub assets for a specific NewAsset ID
+router.get(
+  '/by-newasset/:newassetId',
+  verifyToken,
+  newAssetsSubTagsController.getNewAssetsSubTagsByNewAssetId
+);
+
 // Get a single sub asset by ID
 router.get('/:id', verifyToken, newAssetsSubTagsController.getNewAssetsSubTagsById);
 

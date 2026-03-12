@@ -380,6 +380,52 @@ exports.getAllNewAssetsSubTags = async (req, res) => {
   }
 };
 
+// Get all newAssetsSubTags for a specific NewAsset ID (parent)
+exports.getNewAssetsSubTagsByNewAssetId = async (req, res) => {
+  try {
+    const { newassetId } = req.params;
+
+    const parentId = parseInt(newassetId, 10);
+    if (Number.isNaN(parentId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid newassetId',
+      });
+    }
+
+    const parentAsset = await prisma.newAsset.findUnique({
+      where: { id: parentId },
+      include: {
+        newAssetsSubTags: {
+          include: newAssetsSubTagsInclude,
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!parentAsset) {
+      return res.status(404).json({
+        success: false,
+        message: 'Parent NewAsset not found',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      parentId,
+      count: parentAsset.newAssetsSubTags.length,
+      data: parentAsset.newAssetsSubTags,
+    });
+  } catch (error) {
+    console.error('Error fetching newAssetsSubTags by newassetId:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch newAssetsSubTags for this NewAsset',
+      error: error.message,
+    });
+  }
+};
+
 // Get single newAssetsSubTags by ID
 exports.getNewAssetsSubTagsById = async (req, res) => {
   try {
