@@ -95,6 +95,7 @@ model User {
   manageLocations    ManageLocation[]
   maintenances       Maintenance[]
   newAssets          NewAsset[]          // One-to-many: one User has many NewAssets
+  newAssetsSubTags   newAssetsSubTags[]  // One-to-many: one User has many newAssetsSubTags
   notifications      Notification[]
   
   @@map("users")
@@ -239,8 +240,9 @@ model EmployeeList {
   updatedAt    DateTime @updatedAt
   
   // Relations
-  transferAssets TransferAsset[] // One-to-many relationship with TransferAsset
-  newAssets      NewAsset[] // One-to-many relationship with NewAsset
+  transferAssets   TransferAsset[] // One-to-many relationship with TransferAsset
+  newAssets        NewAsset[] // One-to-many relationship with NewAsset
+  newAssetsSubTags newAssetsSubTags[]
 
   departmentId  Int?
   department    Department? @relation(fields: [departmentId], references: [id])
@@ -470,7 +472,8 @@ model AssetCondition {
   updatedAt   DateTime  @updatedAt
   
   // Relations
-  newAssets   NewAsset[] // One-to-many relationship with NewAsset
+  newAssets       NewAsset[] // One-to-many relationship with NewAsset
+  newAssetsSubTags newAssetsSubTags[]
 }
 
 // HeadOfDepartment model
@@ -501,6 +504,7 @@ model Department {
   admins                 Admin[] // One-to-many: one Department has many Admins
   cities                 City[] // Many-to-many: one Department can belong to many Cities
   newAssets              NewAsset[] // One-to-many relationship with NewAsset
+  newAssetsSubTags       newAssetsSubTags[]
   
   hodId                  Int?
   headOfDepartment       HeadOfDepartment? @relation(fields: [hodId], references: [id])
@@ -518,8 +522,9 @@ model Country {
   updatedAt DateTime @updatedAt
 
   // Relations
-  states    State[]
-  newAssets NewAsset[]
+  states          State[]
+  newAssets       NewAsset[]
+  newAssetsSubTags newAssetsSubTags[]
 
   @@map("countries")
 }
@@ -534,9 +539,10 @@ model State {
   updatedAt DateTime @updatedAt
 
   // Relations
-  country   Country   @relation(fields: [countryId], references: [id])
-  cities    City[]
-  newAssets NewAsset[]
+  country         Country   @relation(fields: [countryId], references: [id])
+  cities          City[]
+  newAssets       NewAsset[]
+  newAssetsSubTags newAssetsSubTags[]
 
   @@map("states")
 }
@@ -552,14 +558,15 @@ model City {
   description String?
 
   // Relations
-  stateId     Int?
-  state       State?     @relation(fields: [stateId], references: [id])
-  departments Department[]
-  newAssets   NewAsset[]   // One-to-many: one City has many NewAssets
-  buildings   Building[]   // One-to-many: one City has many Buildings
+  stateId         Int?
+  state           State?     @relation(fields: [stateId], references: [id])
+  departments     Department[]
+  newAssets       NewAsset[]   // One-to-many: one City has many NewAssets
+  buildings       Building[]   // One-to-many: one City has many Buildings
+  newAssetsSubTags newAssetsSubTags[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 // Building model
@@ -570,11 +577,12 @@ model Building {
   number      String?    @db.NVarChar(50)
   cityId      Int?
   city        City?      @relation(fields: [cityId], references: [id], onDelete: SetNull)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
   
-  floors      Floor[]
-  newAssets   NewAsset[]
+  floors          Floor[]
+  newAssets       NewAsset[]
+  newAssetsSubTags newAssetsSubTags[]
 }
 
 // Floor model
@@ -583,10 +591,11 @@ model Floor {
   nameOrNumber  String
   buildingId    Int?
   building      Building?  @relation(fields: [buildingId], references: [id], onDelete: SetNull)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
   
-  newAssets     NewAsset[]
+  newAssets       NewAsset[]
+  newAssetsSubTags newAssetsSubTags[]
 }
 
 // NPK Sensor data model
@@ -1098,7 +1107,8 @@ model AssetBrand {
   updatedAt           DateTime @updatedAt
 
   // Relations
-  newAssets NewAsset[]
+  newAssets       NewAsset[]
+  newAssetsSubTags newAssetsSubTags[]
 }
 
 // AssetCategory model
@@ -1115,6 +1125,7 @@ model AssetCategory {
   
   // Relations
   newAssets          NewAsset[] // One-to-many relationship with NewAsset
+  newAssetsSubTags   newAssetsSubTags[]
 }
 
 // NewAsset model
@@ -1142,7 +1153,7 @@ model NewAsset {
 
   // Relations - Category, Department, Employee, Condition
   assetCategoryId  Int?
-  assetCategory    AssetCategory?  @relation(fields: [assetCategoryId], references: [id])
+  assetCategory    AssetCategory?  @relation(fields: [assetCategoryId], references: [id], onUpdate: NoAction, onDelete: NoAction)
 
   assetBrandId     Int?
   assetBrand       AssetBrand?     @relation(fields: [assetBrandId], references: [id], onUpdate: NoAction, onDelete: NoAction)
@@ -1154,7 +1165,7 @@ model NewAsset {
   employee         EmployeeList?   @relation(fields: [employeeId], references: [id], onUpdate: NoAction, onDelete: NoAction)
 
   assetConditionId Int?
-  assetCondition   AssetCondition? @relation(fields: [assetConditionId], references: [id])
+  assetCondition   AssetCondition? @relation(fields: [assetConditionId], references: [id], onUpdate: NoAction, onDelete: NoAction)
 
   // Relations - Location (Country, State, City) - NoAction to avoid cyclic cascade
   countryId        Int?
@@ -1173,12 +1184,13 @@ model NewAsset {
   floor            Floor?          @relation(fields: [floorId], references: [id], onUpdate: NoAction, onDelete: NoAction)
 
   userId           String?        // Optional: link to User model for member assets
-  user             User?           @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  user             User?           @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Relations
   logMaintenances  LogMaintenance[]
   customEvents     CustomEvent[]
   assetTags        AssetTag[]
+  newAssetsSubTags newAssetsSubTags[]
 }
 
 // Sub model for NewAsset with same fields plus parent reference
