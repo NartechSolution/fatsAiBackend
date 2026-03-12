@@ -72,6 +72,7 @@ const assetBrandRoutes = require('./routes/assetBrandRoutes');
 const assetCategoryRoutes = require('./routes/assetCategoryRoutes');
 const newAssetRoutes = require('./routes/newAssetRoutes');
 const newAssetConditionRoutes = require('./routes/newAssetConditionRoutes');
+const newAssetsSubTagsRoutes = require('./routes/newAssetsSubTagsRoutes');
 const logMaintenanceRoutes = require('./routes/logMaintenanceRoutes');
 const assetHistoryRoutes = require('./routes/assetHistoryRoutes');
 const customEventRoutes = require('./routes/customEventRoutes');
@@ -223,6 +224,7 @@ async function startServer() {
     app.use('/api/asset-brands', assetBrandRoutes);
     app.use('/api/asset-categories', assetCategoryRoutes);
     app.use('/api/new-assets', newAssetRoutes);
+    app.use('/api/new-assets-sub-tags', newAssetsSubTagsRoutes);
     app.use('/api/new-asset-conditions', newAssetConditionRoutes);
     app.use('/api/log-maintenance', logMaintenanceRoutes);
     app.use('/api/asset-history', assetHistoryRoutes);
