@@ -152,11 +152,10 @@ exports.getAllAssetMovements = async (req, res) => {
       where.locationTagId = parsed;
     }
 
-    // Token-wise filter: restrict to records created by this user when possible
+    // Token-wise filter: restrict to movements of assets owned by this member
     const authUser = req.user || {};
-    const tokenKey = authUser.userId || authUser.email || null;
-    if (tokenKey) {
-      where.requestedBy = tokenKey;
+    if (authUser.userId) {
+      where.newAsset = { userId: authUser.userId };
     }
 
     const items = await prisma.assetMovement.findMany({
