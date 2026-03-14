@@ -415,6 +415,10 @@ model LocationTag {
   level        String    @db.NVarChar(50)
   officeRoom   String    @db.NVarChar(100)
   locationCode String    @unique @db.NVarChar(500)
+  
+  // Relations
+  assetMovements AssetMovement[]
+
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   
@@ -1191,6 +1195,7 @@ model NewAsset {
   customEvents     CustomEvent[]
   assetTags        AssetTag[]
   newAssetsSubTags newAssetsSubTags[]
+  assetMovements   AssetMovement[]
 }
 
 // Sub model for NewAsset with same fields plus parent reference
@@ -1268,6 +1273,21 @@ model AssetTag {
   newAsset    NewAsset @relation(fields: [newassetId], references: [id], onDelete: Cascade)
 
   @@map("asset_tags")
+}
+
+model AssetMovement {
+  id            Int       @id @default(autoincrement())
+  newassetId    Int
+  locationTagId Int
+  requestedBy   String?   @db.NVarChar(255)
+  approvedBy    String?   @db.NVarChar(255)
+  remarks       String?   @db.NVarChar(Max)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  newAsset    NewAsset    @relation(fields: [newassetId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  locationTag LocationTag @relation(fields: [locationTagId], references: [id])
 }
 
 model LogMaintenance {

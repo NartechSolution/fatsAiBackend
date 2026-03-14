@@ -95,6 +95,7 @@ const languageLocalizationRoutes = require('./routes/languageLocalizationRoutes'
 const auditLogRoutes = require('./routes/auditLogRoutes');
 const systemHealthRoutes = require('./routes/systemHealthRoutes');
 const assetTagRoutes = require('./routes/assetTagRoutes');
+const assetMovementRoutes = require('./routes/assetMovementRoutes');
 const buildingRoutes = require('./routes/buildingRoutes');
 const floorRoutes = require('./routes/floorRoutes');
 
@@ -248,6 +249,7 @@ async function startServer() {
     app.use('/api/audit-logs', auditLogRoutes);
     app.use('/api/system-health', systemHealthRoutes);
     app.use('/api/asset-tags', assetTagRoutes);
+    app.use('/api/asset-movements', assetMovementRoutes);
     app.use('/api/buildings', buildingRoutes);
     app.use('/api/floors', floorRoutes);
     // Error handling middleware (must be after all routes)
