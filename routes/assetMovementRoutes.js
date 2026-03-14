@@ -10,11 +10,11 @@ router.post(
   assetMovementController.createAssetMovements
 );
 
-// Get all asset movements (optional filters: ?newassetId=&locationTagId=)
-router.get('/', assetMovementController.getAllAssetMovements);
+// Get all asset movements (optional filters: ?newassetId=&locationTagId=) - token based
+router.get('/', verifyToken, assetMovementController.getAllAssetMovements);
 
-// Get a single asset movement by id
-router.get('/:id', assetMovementController.getAssetMovementById);
+// Get a single asset movement by id - token based
+router.get('/:id', verifyToken, assetMovementController.getAssetMovementById);
 
 // Update asset movement
 router.put(

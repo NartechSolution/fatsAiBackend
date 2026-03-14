@@ -12,6 +12,8 @@ exports.createAssetMovements = async (req, res) => {
       remarks,
     } = req.body;
 
+    const authUser = req.user || {};
+
     if (!locationTagId) {
       return res.status(400).json({
         success: false,
@@ -78,10 +80,15 @@ exports.createAssetMovements = async (req, res) => {
       });
     }
 
+    const effectiveRequestedBy =
+      requestedBy !== undefined
+        ? requestedBy
+        : authUser.userId || authUser.email || null;
+
     const dataToCreate = parsedNewAssetIds.map((id) => ({
       newassetId: id,
       locationTagId: parsedLocationTagId,
-      requestedBy: requestedBy || null,
+      requestedBy: effectiveRequestedBy,
       approvedBy: approvedBy || null,
       remarks: remarks || null,
     }));
@@ -143,6 +150,13 @@ exports.getAllAssetMovements = async (req, res) => {
         });
       }
       where.locationTagId = parsed;
+    }
+
+    // Token-wise filter: restrict to records created by this user when possible
+    const authUser = req.user || {};
+    const tokenKey = authUser.userId || authUser.email || null;
+    if (tokenKey) {
+      where.requestedBy = tokenKey;
     }
 
     const items = await prisma.assetMovement.findMany({
