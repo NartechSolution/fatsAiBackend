@@ -7,6 +7,7 @@ exports.createAssetMovements = async (req, res) => {
       newassetId,
       newassetIds,
       locationTagId,
+      status,
       requestedBy,
       approvedBy,
       remarks,
@@ -88,6 +89,7 @@ exports.createAssetMovements = async (req, res) => {
     const dataToCreate = parsedNewAssetIds.map((id) => ({
       newassetId: id,
       locationTagId: parsedLocationTagId,
+      ...(status !== undefined ? { status: status || 'pending' } : {}),
       requestedBy: effectiveRequestedBy,
       approvedBy: approvedBy || null,
       remarks: remarks || null,
@@ -231,6 +233,7 @@ exports.updateAssetMovement = async (req, res) => {
     const {
       newassetId,
       locationTagId,
+      status,
       requestedBy,
       approvedBy,
       remarks,
@@ -308,6 +311,7 @@ exports.updateAssetMovement = async (req, res) => {
       data: {
         newassetId: newNewassetId,
         locationTagId: newLocationTagId,
+        ...(status !== undefined ? { status: status || 'pending' } : {}),
         requestedBy:
           requestedBy !== undefined ? requestedBy || null : existing.requestedBy,
         approvedBy:

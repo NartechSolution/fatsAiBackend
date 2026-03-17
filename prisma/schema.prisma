@@ -1279,6 +1279,7 @@ model AssetMovement {
   id            Int       @id @default(autoincrement())
   newassetId    Int
   locationTagId Int
+  status        String    @default("pending") @db.NVarChar(50) // pending, approved, rejected, completed, etc.
   requestedBy   String?   @db.NVarChar(255)
   approvedBy    String?   @db.NVarChar(255)
   remarks       String?   @db.NVarChar(Max)
